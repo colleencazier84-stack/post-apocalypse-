@@ -1,0 +1,4195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wasteland Defense: Fury Road</title>
+    <!-- Tailwind CSS for modern responsive interfaces -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for heavy post-apocalyptic icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            margin: 0;
+            background-color: #0b0704;
+            color: #f59e0b; /* Golden Amber Theme */
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 10px;
+            user-select: none;
+            overflow-x: hidden;
+        }
+        h1 {
+            text-shadow: 0 0 12px rgba(245, 158, 11, 0.5), 3px 3px #451a03;
+        }
+        #ui-panel, .terminal-bg {
+            background: #1c120c;
+            border: 2px solid #b45309;
+            box-shadow: 0 0 20px rgba(180, 83, 9, 0.25);
+        }
+        canvas {
+            background-color: #d97706; /* Dusty orange sand */
+            display: block;
+            cursor: crosshair;
+        }
+        .shop-btn {
+            background: #451a03;
+            border: 2px solid #b45309;
+            transition: all 0.2s ease-in-out;
+        }
+        .shop-btn:hover:not(:disabled) {
+            background: #d97706;
+            color: #0b0704;
+            box-shadow: 0 0 10px #f59e0b;
+        }
+        .shop-btn.selected {
+            background: #b45309;
+            color: white;
+            border-color: #f59e0b;
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+        }
+        .terminal-glow {
+            text-shadow: 0 0 5px #10b981;
+        }
+    </style>
+</head>
+<body class="p-2 md:p-4">
+
+
+    <div class="w-full max-w-4xl flex flex-col items-center mb-2 gap-1 text-center">
+        <h1 class="text-2xl md:text-4xl font-black tracking-widest text-amber-500 flex items-center justify-center gap-2 select-none">
+            <span id="lightning-egg" onclick="toggleSniperMode()" class="cursor-pointer transition-all duration-200 inline-block">⚡</span> 
+            WASTELAND: HEROES OF THE DUST 
+            <span id="lightning-egg-2" onclick="toggleSniperMode()" class="cursor-pointer transition-all duration-200 inline-block">⚡</span>
+        </h1>
+    </div>
+   
+    <div id="ui-panel" class="w-full max-w-4xl rounded-lg p-3 md:p-4 mb-3 flex flex-wrap justify-between items-center gap-3 font-bold text-sm md:text-base">
+        <div class="flex items-center gap-2">SCRAP: <span id="scrap-txt" class="text-amber-300 text-lg">220</span> <span class="text-xl">⚙️</span></div>
+        <div class="flex items-center gap-2">CITADEL HP: <span id="health-txt" class="text-rose-500 text-lg">20</span> <span class="text-xl">❤️</span></div>
+        <div class="flex items-center gap-2">WAVE: <span id="wave-txt" class="text-yellow-500 text-lg">1</span> <span class="text-xl">☠️</span></div>
+        
+        <!-- Game Controls (Pause and Reset) -->
+        <div class="flex items-center gap-1.5 bg-amber-950/60 p-1.5 rounded-lg border border-amber-800">
+            <button onclick="togglePause()" id="pause-btn" class="px-2.5 py-1 text-xs rounded bg-amber-500 hover:bg-amber-400 text-black font-extrabold flex items-center gap-1 transition">
+                <i class="fa-solid fa-pause"></i> PAUSE
+            </button>
+            <button onclick="resetGame()" class="px-2.5 py-1 text-xs rounded bg-red-900 hover:bg-red-800 text-white font-extrabold flex items-center gap-1 transition">
+                <i class="fa-solid fa-rotate-left"></i> RESET
+            </button>
+        </div>
+
+
+        <!-- Game Speed Controllers -->
+        <div class="flex items-center gap-1 bg-amber-950/60 p-1.5 rounded-lg border border-amber-800">
+            <span class="text-[10px] mr-1 text-amber-500/80">SPEED:</span>
+            <button onclick="setGameSpeed(1)" id="speed-1x" class="px-2 py-0.5 text-xs rounded bg-amber-500 text-black font-bold">1x</button>
+            <button onclick="setGameSpeed(2)" id="speed-2x" class="px-2 py-0.5 text-xs rounded bg-amber-950 text-amber-400 hover:bg-amber-800">2x</button>
+            <button onclick="setGameSpeed(4)" id="speed-4x" class="px-2 py-0.5 text-xs rounded bg-amber-950 text-amber-400 hover:bg-amber-800">4x</button>
+        </div>
+
+
+        <!-- Witness Me Barrage Ability Button inside top box -->
+        <button class="px-3 py-1.5 bg-red-950/90 hover:bg-red-900 border border-red-700 hover:border-red-500 rounded text-amber-100 text-xs font-black flex items-center gap-1.5 transition" id="btn-kamikaze" onclick="triggerKamikaze()">
+            <span>💥</span> "WITNESS ME!" BOMB (50 ⚙️)
+        </button>
+
+
+        <!-- Sniper Score Banner -->
+        <div id="sniper-hud" class="hidden items-center gap-2 bg-red-950/80 border border-red-600 px-3 py-1 rounded text-red-400 animate-bounce">
+            SNIPES: <span id="snipe-txt" class="text-lg font-black text-red-200">0</span> 🎯
+        </div>
+
+
+        <!-- Send Next Convoy Trigger & Persistent Infinite Mode Retaliation Launcher -->
+        <div class="flex items-center gap-2">
+            <button id="infinite-nuke-btn" class="hidden px-3.5 py-2 text-xs md:text-sm rounded font-black uppercase transition bg-red-700 hover:bg-red-600 text-white border-2 border-red-500 animate-pulse flex items-center gap-1 shadow-lg shadow-red-950" onclick="triggerNukeCounterstrike()">
+                🚀 ENGAGE FINAL STRIKE
+            </button>
+            <button id="wave-btn" class="px-4 py-2 rounded font-bold uppercase transition bg-emerald-800 hover:bg-emerald-700 text-white border-2 border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" onclick="startWave()">
+                Send Next Convoy ➔
+            </button>
+        </div>
+    </div>
+
+
+    <div id="game-container" class="relative rounded-lg overflow-hidden border-4 border-amber-950 shadow-2xl max-w-full">
+        <!-- Absolute Overlay Narration Bar at top of gameplay screen -->
+        <div id="status-bar" class="absolute top-0 left-0 w-full bg-black/95 border-b border-amber-900/60 text-center font-bold text-xs md:text-sm text-amber-400 py-2.5 px-4 transition-opacity duration-300 opacity-0 pointer-events-none z-10 select-none"></div>
+        <canvas id="gameCanvas" width="800" height="400" class="max-w-full"></canvas>
+    </div>
+
+
+    <div class="w-full max-w-4xl mt-3 grid grid-cols-1 md:grid-cols-4 gap-3">
+        <!-- Max Sniper Defender -->
+        <button class="shop-btn selected text-left p-3 rounded flex flex-col justify-between" id="btn-gunner" onclick="selectTower('gunner', 100)">
+            <div class="flex justify-between items-center w-full">
+                <span class="font-extrabold text-amber-400">Max "The Interceptor"</span>
+                <span class="text-xs px-2 py-0.5 bg-amber-950/80 rounded border border-amber-500">100 ⚙️</span>
+            </div>
+            <p class="text-[10px] text-amber-500/80 mt-1 leading-snug">Elite sniper bunker. Slow firing speed, but deals immense armor-shattering damage over a massive range.</p>
+        </button>
+
+
+        <!-- Nux Flamethrower Defender -->
+        <button class="shop-btn text-left p-3 rounded flex flex-col justify-between" id="btn-flamer" onclick="selectTower('flamer', 150)">
+            <div class="flex justify-between items-center w-full">
+                <span class="font-extrabold text-amber-400">Nux "The Firebrand"</span>
+                <span class="text-xs px-2 py-0.5 bg-amber-950/80 rounded border border-amber-500">150 ⚙️</span>
+            </div>
+            <p class="text-[10px] text-amber-500/80 mt-1 leading-snug">Spits sweeping flames. Low single target damage, but melts whole cohorts with continuous flame particles.</p>
+        </button>
+
+
+        <!-- Furiosa Cannon Defender -->
+        <button class="shop-btn text-left p-3 rounded flex flex-col justify-between" id="btn-cannon" onclick="selectTower('cannon', 250)">
+            <div class="flex justify-between items-center w-full">
+                <span class="font-extrabold text-amber-400">Furiosa "War Rig"</span>
+                <span class="text-xs px-2 py-0.5 bg-amber-950/80 rounded border border-amber-500">250 ⚙️</span>
+            </div>
+            <p class="text-[10px] text-amber-500/80 mt-1 leading-snug">Constructs a heavy pneumatic gun. Immense impact damage that triggers localized kinetic splash explosions.</p>
+        </button>
+
+
+        <!-- Real-time Tower Upgrade Terminal -->
+        <div id="upgrade-panel" class="p-3 rounded border-2 border-dashed border-amber-800 bg-[#150d08] flex flex-col justify-between text-xs font-bold text-center">
+            <div id="upgrade-empty-state" class="my-auto text-amber-600/70 italic p-1">
+                Click on any built bunker on the dunes to initialize structural upgrades.
+            </div>
+            <div id="upgrade-active-state" class="hidden flex flex-col justify-between h-full">
+                <div class="flex justify-between items-center border-b border-amber-900 pb-1 mb-1">
+                    <span class="text-amber-400" id="upg-title">Bunker Lvl 1</span>
+                    <span class="text-[10px] px-1.5 py-0.5 bg-amber-900/60 rounded" id="upg-type">Gunner</span>
+                </div>
+                <div class="text-left text-[10px] text-amber-500/80 space-y-0.5 my-1">
+                    <div>RANGE: <span class="text-amber-300" id="upg-range">90</span> ➔ <span class="text-emerald-400" id="upg-next-range">105</span></div>
+                    <div>DAMAGE: <span class="text-amber-300" id="upg-dmg">32</span> ➔ <span class="text-emerald-400" id="upg-next-dmg">40</span></div>
+                    <div>FIRE RATE: <span class="text-amber-300" id="upg-rate">65</span> ➔ <span class="text-emerald-400" id="upg-next-rate">55</span></div>
+                </div>
+                <button onclick="performTowerUpgrade()" class="w-full py-1.5 bg-amber-700 hover:bg-amber-600 active:bg-amber-800 text-black font-extrabold rounded-md border border-amber-500 shadow-md uppercase transition">
+                    Upgrade Cost: <span id="upg-cost">100</span> ⚙️
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="w-full max-w-4xl mt-3 flex flex-col sm:flex-row justify-end items-center gap-3">
+        <button id="mainframe-trigger" onclick="openAdminGate()" class="px-5 py-2.5 bg-red-950/80 hover:bg-red-900 border-2 border-red-700 hover:border-red-500 rounded text-red-400 hover:text-red-200 text-xs font-bold uppercase flex items-center gap-2 transition w-full sm:w-auto justify-center">
+            <i class="fa-solid fa-terminal"></i> Enter System Mainframe
+        </button>
+    </div>
+
+
+    <!-- Unlocked Admin System Mainframe Control Panel -->
+    <div id="mainframe-unlocked-panel" class="hidden w-full max-w-4xl mt-4 p-4 rounded-lg border-2 border-emerald-600 bg-stone-950/90 text-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.2)] flex flex-col gap-3">
+        <div class="flex justify-between items-center border-b border-emerald-800 pb-2">
+            <h3 class="text-md font-extrabold uppercase tracking-wider terminal-glow flex items-center gap-2">
+                <i class="fa-solid fa-circle-check text-emerald-500"></i> Citadel Mainframe Control Panel
+            </h3>
+            <span class="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-2 py-0.5 rounded uppercase">Authorization: Level 5</span>
+        </div>
+        
+        <p class="text-xs text-emerald-500/80">Inject raw defense modules, bypass waves, or force-spawn outlaw factions on the dunes.</p>
+        
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5 text-xs">
+            <button onclick="cheatAddScrap()" class="p-2 bg-stone-900 hover:bg-emerald-950 border border-emerald-800 hover:border-emerald-500 rounded font-bold transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-gears"></i> +5k Scrap ⚙️
+            </button>
+            <button onclick="cheatCitadelRepair()" class="p-2 bg-stone-900 hover:bg-emerald-950 border border-emerald-800 hover:border-emerald-500 rounded font-bold transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-shield-halved"></i> Repair HP ❤️
+            </button>
+            <button id="godmode-btn" onclick="cheatToggleGodMode()" class="p-2 bg-stone-900 hover:bg-red-950 border border-emerald-800 hover:border-emerald-500 rounded font-bold transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-heart-circle-bolt"></i> God Mode: OFF 🔱
+            </button>
+            <button onclick="cheatWipeWave()" class="p-2 bg-stone-900 hover:bg-emerald-950 border border-emerald-800 hover:border-emerald-500 rounded font-bold transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-burst"></i> Orbital Strike 💥
+            </button>
+            <button onclick="cheatSkipWave()" class="p-2 bg-stone-900 hover:bg-emerald-950 border border-emerald-800 hover:border-emerald-500 rounded font-bold transition flex items-center justify-center gap-1.5 text-yellow-400">
+                <i class="fa-solid fa-forward-step"></i> Skip Wave ⏭️
+            </button>
+        </div>
+
+
+        <div class="mt-3 border-t border-emerald-900 pt-3">
+            <h4 class="text-xs font-black text-emerald-300 uppercase tracking-widest mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-timeline"></i> Chronos Event Matrix (Quick Jump)
+            </h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+                <button onclick="jumpToMilestone(6)" class="p-2 bg-emerald-950/40 hover:bg-emerald-900/80 border border-emerald-700/60 rounded text-left transition flex items-center justify-between text-emerald-200">
+                    <span>🚜 Wave 6: Bulldozer 1 Cut</span>
+                    <i class="fa-solid fa-angles-right text-emerald-500"></i>
+                </button>
+                <button onclick="jumpToMilestone(12)" class="p-2 bg-emerald-950/40 hover:bg-emerald-900/80 border border-emerald-700/60 rounded text-left transition flex items-center justify-between text-emerald-200">
+                    <span>🚜 Wave 12: Highway Cut</span>
+                    <i class="fa-solid fa-angles-right text-emerald-500"></i>
+                </button>
+                <button onclick="jumpToMilestone(15)" class="p-2 bg-emerald-950/40 hover:bg-emerald-900/80 border border-emerald-700/60 rounded text-left transition flex items-center justify-between text-yellow-300 font-bold">
+                    <span>✉️ Wave 15: Raider Messenger</span>
+                    <i class="fa-solid fa-angles-right text-yellow-500"></i>
+                </button>
+                <button onclick="jumpToMilestone(16)" class="p-2 bg-emerald-950/40 hover:bg-emerald-900/80 border border-emerald-700/60 rounded text-left transition flex items-center justify-between text-rose-300 font-bold">
+                    <span>🚚 Wave 16: Goliath Boss Tank</span>
+                    <i class="fa-solid fa-angles-right text-rose-500"></i>
+                </button>
+                <button onclick="jumpToMilestone(21)" class="p-2 bg-emerald-950/40 hover:bg-emerald-900/80 border border-emerald-700/60 rounded text-left transition flex items-center justify-between text-emerald-200">
+                    <span>💣 Wave 21: Saboteur Bomber</span>
+                    <i class="fa-solid fa-angles-right text-emerald-500"></i>
+                </button>
+                <button onclick="jumpToMilestone(25)" class="p-2 bg-emerald-950/40 hover:bg-emerald-900/80 border border-emerald-700/60 rounded text-left transition flex items-center justify-between text-emerald-200 font-bold text-yellow-400">
+                    <span>🕷️ Wave 25: Mech Crawler (Offroad!)</span>
+                    <i class="fa-solid fa-angles-right text-emerald-500"></i>
+                </button>
+                <button onclick="jumpToMilestone(30)" class="p-2 bg-emerald-950/40 hover:bg-emerald-900/80 border border-emerald-700/60 rounded text-left transition flex items-center justify-between text-red-400 font-extrabold">
+                    <span>🚀 Wave 30: World Ender & Cinematic End</span>
+                    <i class="fa-solid fa-angles-right text-red-500 animate-pulse"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Footnotes -->
+    <div class="mt-4 text-xs text-amber-600/80 text-center max-w-lg leading-relaxed font-bold">
+        Click on the sand dunes to build defensive bunkers. Select built bunkers to trigger upgrades. Background structures are placed safely off-road.
+    </div>
+
+
+    <!-- Admin password modal -->
+    <div id="admin-pass-modal" class="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 hidden">
+        <div class="terminal-bg w-full max-w-md p-6 rounded-lg border-2 border-red-700 shadow-2xl flex flex-col gap-4">
+            <h2 class="text-xl font-bold text-red-500 uppercase tracking-widest flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation"></i> DECRYPT ADMIN BARRIER
+            </h2>
+            <p class="text-xs text-amber-600">secure citadel mainframe. enter command cypher passcode.</p>
+            
+            <div>
+                <label class="block text-xs uppercase font-extrabold text-amber-400 mb-1">Passcode Cypher:</label>
+                <input id="admin-password-input" type="password" placeholder="••••••••" class="w-full bg-stone-950 border-2 border-amber-700 rounded px-3 py-2 text-amber-300 font-mono tracking-wider focus:outline-none focus:border-red-500">
+                <div id="admin-error-lbl" class="text-red-500 text-xs font-bold mt-1.5 hidden">INVALID CYPHER KEY INJECTED</div>
+            </div>
+            <div class="flex justify-end items-center gap-3 text-xs uppercase font-bold">
+                <button onclick="closeAdminGate()" class="px-4 py-2 hover:bg-stone-900 border border-amber-800 rounded text-amber-400">Abort</button>
+                <button onclick="submitAdminCode()" class="px-5 py-2 bg-red-950 hover:bg-red-900 border-2 border-red-700 text-red-200 rounded">Access Decryptor</button>
+            </div>
+        </div>
+    </div>
+
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+
+let scrap = 220; 
+let health = 20;
+let wave = 1;
+let selectedTowerType = 'gunner';
+let selectedTowerCost = 100;
+let gameSpeed = 1;
+let isPaused = false;
+
+
+let activeSelectedTower = null;
+
+
+let isAdminUnlocked = false;
+let isGodMode = false;
+let isSniperMode = false;
+let sniperScore = 0;
+
+
+let mouseX = 0;
+let mouseY = 0;
+let screenShake = 0;
+
+
+// Curved road tracks
+const path = [
+    {x: -20, y: 200},
+    {x: 180, y: 200},
+    {x: 240, y: 100},
+    {x: 520, y: 100},
+    {x: 580, y: 300},
+    {x: 780, y: 300}
+];
+
+
+const path2 = [
+    {x: -20, y: 200},
+    {x: 180, y: 200}, 
+    {x: 580, y: 300}, 
+    {x: 780, y: 300}  
+];
+
+
+const path3 = [
+    {x: -20, y: 200},
+    {x: 180, y: 200},
+    {x: 240, y: 330}, 
+    {x: 740, y: 330}, 
+    {x: 780, y: 300}  
+];
+
+
+const bossStraightPath = [
+    {x: -20, y: 200},
+    {x: 780, y: 300}
+];
+
+
+// Straight line crossing straight through the fields for the Mech Crawler (ignoring roads)
+const crawlerTitanPath = [
+    {x: -50, y: 150},
+    {x: 400, y: 220},
+    {x: 780, y: 300}
+];
+
+
+let enemies = [];
+let towers = [];
+let bullets = [];
+let particles = [];
+
+
+let debrisList = [];       
+let creatures = [];        
+let rogueRacers = [];      
+
+
+let waveInProgress = false;
+let spawnTimer = 0;
+let enemiesToSpawn = 0;
+let frameCount = 0;
+
+
+let cutsceneActive = false;
+let cutsceneTimer = 0;
+let cutscenePhase = 0;
+let cutsceneType = null; 
+let newPathUnlocked = false;  
+let newPath2Unlocked = false; 
+let cutsceneVehicle = null;
+
+
+// Custom disembarking Messenger Guy state
+let messengerGuy = null;
+
+
+// End-game branching state variables
+let endgameChoiceActive = false;
+let isInfiniteMode = false;
+let activeMidWaveBombers = [];
+
+
+// Victory Nuclear Counterstrike state variables
+let nukeActive = false;
+let nukeTimer = 0;
+let nukePhase = 0;
+let nukeSiloX = 750;
+let nukeSiloY = 260;
+let nukeMissile = { x: 0, y: 0, targetX: 400, targetY: 220, angle: 0, progress: 0 };
+let scorchedEarth = []; 
+
+
+// Custom wave 15 properties
+let threatSignClicked = false;
+let threatSignOpened = false;
+let threatSignX = 380;
+let threatSignY = 130;
+
+
+let bomberThrowTimer = 0;
+
+
+const towerSpecs = {
+    gunner: { range: 65, fireRate: 65, damage: 32, color: '#374151', barrelLen: 22, colorBarrel: '#111827', bulletSize: 3.5, name: 'Interceptor' },
+    flamer: { range: 45, fireRate: 8, damage: 2.2, color: '#9a3412', barrelLen: 14, colorBarrel: '#ff6600', bulletSize: 6, name: 'Firebrand' },
+    cannon: { range: 55, fireRate: 110, damage: 75, color: '#451a03', barrelLen: 25, colorBarrel: '#3f220f', bulletSize: 7, name: 'War Rig' }
+};
+
+
+function drawRefinedBiker(ctx, x, y, angle, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    
+    // Bike fat treaded wheels
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.arc(-16, 0, 9, 0, Math.PI * 2);
+    ctx.arc(16, 0, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(-16, 0, 5, 0, Math.PI * 2);
+    ctx.arc(16, 0, 5, 0, Math.PI * 2);
+    ctx.stroke();
+
+
+    // Rusted spiked exhaust pipe and fuel tank
+    ctx.fillStyle = '#451a03'; 
+    ctx.fillRect(-12, -7, 24, 13);
+    ctx.fillStyle = color || '#7f1d1d';
+    ctx.fillRect(-6, -8, 12, 15);
+
+
+    // Frontal scrap iron shield plate
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.moveTo(10, -11);
+    ctx.lineTo(24, -4);
+    ctx.lineTo(24, 4);
+    ctx.lineTo(10, 11);
+    ctx.closePath();
+    ctx.fill();
+
+
+    // Steel Spikes protruding from front plate
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(24, -4); ctx.lineTo(34, -7);
+    ctx.moveTo(24, 0);  ctx.lineTo(36, 0);
+    ctx.moveTo(24, 4);  ctx.lineTo(34, 7);
+    ctx.stroke();
+
+
+    // Engine bay details
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(-4, -4, 9, 8);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(1, -6, 2, 2);
+
+
+    // Handle bars
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(8, -12);
+    ctx.lineTo(12, -18);
+    ctx.moveTo(8, 12);
+    ctx.lineTo(12, 18);
+    ctx.stroke();
+
+
+    ctx.restore();
+}
+
+
+function drawLittleRaiderGuy(ctx, x, y, state, frameCount) {
+    ctx.save();
+    ctx.translate(x, y);
+
+
+    // Bounce bobbing based on walking/idle frames
+    let bob = 0;
+    let legSwing = 0;
+    if (state === 'walking' || state === 'returning') {
+        bob = Math.abs(Math.sin(frameCount * 0.18)) * 3;
+        legSwing = Math.sin(frameCount * 0.18) * 8;
+    } else if (state === 'planting') {
+        bob = Math.abs(Math.sin(frameCount * 0.3)) * 4; 
+    } else if (state === 'taunting') {
+        bob = Math.sin(frameCount * 0.1) * 2.5; 
+    }
+
+
+    // Legs
+    ctx.fillStyle = '#292524';
+    ctx.fillRect(-3, 6 - bob + legSwing, 2, 6);
+    ctx.fillRect(1, 6 - bob - legSwing, 2, 6);
+
+
+    // Spiked heavy boots
+    ctx.fillStyle = '#44403c';
+    ctx.fillRect(-4, 11 - bob + legSwing, 3.5, 2.5);
+    ctx.fillRect(0, 11 - bob - legSwing, 3.5, 2.5);
+
+
+    // Body armor vest (Rust and dark leather)
+    ctx.fillStyle = '#542d17';
+    ctx.fillRect(-6, -7 - bob, 12, 14);
+    ctx.fillStyle = '#b45309'; 
+    ctx.fillRect(-4, -7 - bob, 2, 14);
+    ctx.fillRect(2, -7 - bob, 2, 14);
+
+
+    // Spikes on shoulders
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-6, -5 - bob); ctx.lineTo(-11, -9 - bob);
+    ctx.moveTo(6, -5 - bob); ctx.lineTo(11, -9 - bob);
+    ctx.stroke();
+
+
+    // Head with gas mask and helmet
+    ctx.fillStyle = '#27272a'; 
+    ctx.beginPath();
+    ctx.arc(0, -11 - bob, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+
+
+    // Helmet spike (Mohawk styling)
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.moveTo(-1.5, -16 - bob);
+    ctx.lineTo(0, -22 - bob);
+    ctx.lineTo(1.5, -16 - bob);
+    ctx.closePath();
+    ctx.fill();
+
+
+    // Yellow Glowing Gas Mask goggles
+    ctx.fillStyle = '#eab308';
+    ctx.beginPath();
+    ctx.arc(-2, -11 - bob, 1.5, 0, Math.PI * 2);
+    ctx.arc(2, -11 - bob, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+
+    // Gas mask front filter snout
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-1.5, -9 - bob, 3, 4);
+
+
+    ctx.restore();
+}
+
+
+function isDebrisOnAnyRoad(px, py, maxDist) {
+    if (isCloseToSpecificPath(px, py, path, maxDist)) return true;
+    if (isCloseToSpecificPath(px, py, path2, maxDist)) return true;
+    if (isCloseToSpecificPath(px, py, path3, maxDist)) return true;
+    if (isCloseToSpecificPath(px, py, bossStraightPath, maxDist)) return true;
+    return false;
+}
+
+
+function initWastelandDebris() {
+    debrisList = [];
+    const buildingTypes = ['shack', 'watchtower'];
+    
+    let attempts = 0;
+    while (debrisList.length < 8 && attempts < 500) {
+        let testX = Math.random() * (canvas.width - 160) + 80;
+        let testY = Math.random() * (canvas.height - 160) + 80;
+        
+        let isCollision = isDebrisOnAnyRoad(testX, testY, 42);
+        
+        if (!isCollision) {
+            for (let existing of debrisList) {
+                let dist = Math.sqrt((existing.x - testX)**2 + (existing.y - testY)**2);
+                if (dist < 85) {
+                    isCollision = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!isCollision) {
+            let selectedType = buildingTypes[Math.floor(Math.random() * buildingTypes.length)];
+            debrisList.push({
+                x: testX,
+                y: testY,
+                type: selectedType,
+                size: Math.random() * 8 + 24,
+                color: selectedType === 'shack' ? '#542d17' : '#44403c',
+                rotation: (Math.random() - 0.5) * 0.3,
+                hasDish: Math.random() > 0.4,
+                roofColor: Math.random() > 0.4 ? '#4a1d0d' : '#27272a',
+                variationId: Math.floor(Math.random() * 3)
+            });
+        }
+        attempts++;
+    }
+}
+
+
+function spawnCreature() {
+    if (creatures.filter(c => c.type !== 'buzzard').length >= 8) return; 
+    
+    const sides = ['left', 'right', 'top', 'bottom'];
+    const chosenSide = sides[Math.floor(Math.random() * sides.length)];
+    let cx, cy;
+    
+    if (chosenSide === 'left') { cx = -10; cy = Math.random() * canvas.height; }
+    else if (chosenSide === 'right') { cx = canvas.width + 10; cy = Math.random() * canvas.height; }
+    else if (chosenSide === 'top') { cx = Math.random() * canvas.width; cy = -10; }
+    else { cx = Math.random() * canvas.width; cy = canvas.height + 10; }
+    
+    const types = ['coyote', 'snake', 'rabbit', 'lizard'];
+    const selectedType = types[Math.floor(Math.random() * types.length)];
+    
+    creatures.push({
+        x: cx,
+        y: cy,
+        speed: selectedType === 'coyote' ? 0.35 : (selectedType === 'rabbit' ? 0.65 : (selectedType === 'lizard' ? 0.40 : 0.30)),
+        angle: Math.random() * Math.PI * 2,
+        type: selectedType,
+        legCycle: Math.random() * 100,
+        changeDirTimer: Math.random() * 250 + 200,
+        jumpState: 0 
+    });
+}
+
+
+function spawnBuzzard() {
+    if (creatures.filter(c => c.type === 'buzzard').length >= 3) return; 
+    
+    creatures.push({
+        type: 'buzzard',
+        centerX: Math.random() * canvas.width,
+        centerY: Math.random() * canvas.height * 0.5 + 40,
+        circleRadius: Math.random() * 80 + 40,
+        circleAngle: Math.random() * Math.PI * 2,
+        circleSpeed: (Math.random() * 0.0045 + 0.0025) * (Math.random() > 0.5 ? 1 : -1),
+        speedX: (Math.random() - 0.5) * 0.1,
+        speedY: (Math.random() - 0.5) * 0.08,
+        legCycle: Math.random() * 100,
+        x: 0,
+        y: 0
+    });
+}
+
+
+function spawnMotorcycleGang() {
+    if (rogueRacers.length >= 3) return; 
+    let gangSize = Math.floor(Math.random() * 2) + 2; 
+    let startY = Math.random() * (canvas.height - 100) + 50;
+    
+    for (let s = 0; s < gangSize; s++) {
+        setTimeout(() => {
+            if (cutsceneActive || isPaused || nukeActive) return;
+            rogueRacers.push({
+                x: -45,
+                y: startY + (Math.random() - 0.5) * 110,
+                vx: Math.random() * 0.6 + 0.5, 
+                vy: (Math.random() - 0.5) * 0.2, 
+                type: 'bike',
+                color: '#1e293b',
+                dustTimer: 0,
+                stuckTimer: 0,
+                active: true
+            });
+        }, s * 600);
+    }
+}
+
+
+function spawnRogueRacer() {
+    if (rogueRacers.length >= 2) return; 
+    let startY = Math.random() * (canvas.height - 100) + 50;
+    
+    rogueRacers.push({
+        x: -45,
+        y: startY,
+        vx: Math.random() * 0.9 + 0.7, 
+        vy: (Math.random() - 0.5) * 0.15, 
+        type: 'ratrod',
+        color: '#5c220f',
+        dustTimer: 0,
+        stuckTimer: 0,
+        active: true,
+        wheelieAngle: 0,
+        wheelieTimer: 0,
+        isWheelie: false
+    });
+}
+
+
+function openAdminGate() {
+    if (isAdminUnlocked) {
+        showFloatingText(400, 200, "ALREADY DECRYPTED", "#10b981");
+    } else {
+        document.getElementById('admin-error-lbl').classList.add('hidden');
+        document.getElementById('admin-password-input').value = '';
+        document.getElementById('admin-pass-modal').classList.remove('hidden');
+    }
+}
+
+
+function closeAdminGate() {
+    document.getElementById('admin-pass-modal').classList.add('hidden');
+}
+
+
+function submitAdminCode() {
+    const entered = document.getElementById('admin-password-input').value;
+    if (entered === 'Legoacalypse') {
+        unlockTerminalSuccess();
+    } else {
+        const errorLbl = document.getElementById('admin-error-lbl');
+        errorLbl.classList.remove('hidden');
+        errorLbl.classList.add('animate-bounce');
+        setTimeout(() => errorLbl.classList.remove('animate-bounce'), 1000);
+    }
+}
+
+
+function unlockTerminalSuccess() {
+    isAdminUnlocked = true;
+    document.getElementById('admin-pass-modal').classList.add('hidden');
+    document.getElementById('mainframe-unlocked-panel').classList.remove('hidden');
+    document.getElementById('mainframe-trigger').classList.add('hidden');
+    showFloatingText(400, 200, "🔓 MAIN DECRYPTED", "#10b981");
+}
+
+
+function toggleSniperMode() {
+    isSniperMode = !isSniperMode;
+    const hud = document.getElementById('sniper-hud');
+    if (isSniperMode) {
+        hud.classList.remove('hidden');
+        hud.classList.add('flex');
+        showFloatingText(400, 100, "🎯 SCOPE ON", "#ef4444");
+    } else {
+        hud.classList.add('hidden');
+        hud.classList.remove('flex');
+        showFloatingText(400, 100, "SCOPE OFF", "#fbbf24");
+    }
+}
+
+
+function togglePause() {
+    if (nukeActive) return;
+    isPaused = !isPaused;
+    const pBtn = document.getElementById('pause-btn');
+    if (isPaused) {
+        pBtn.innerHTML = `<i class="fa-solid fa-play"></i> RESUME`;
+        pBtn.classList.replace('bg-amber-500', 'bg-emerald-600');
+        pBtn.classList.replace('hover:bg-amber-400', 'hover:bg-emerald-500');
+        showFloatingText(400, 200, "⏸️ SYSTEM PAUSED", "#ef4444");
+    } else {
+        pBtn.innerHTML = `<i class="fa-solid fa-pause"></i> PAUSE`;
+        pBtn.classList.replace('bg-emerald-600', 'bg-amber-500');
+        pBtn.classList.replace('hover:bg-emerald-500', 'hover:bg-amber-400');
+        showFloatingText(400, 200, "▶️ RESUMED", "#10b981");
+    }
+}
+
+
+function jumpToMilestone(targetWave) {
+    if (nukeActive) return;
+    
+    enemies = [];
+    enemiesToSpawn = 0;
+    waveInProgress = false;
+    cutsceneActive = false;
+    cutsceneVehicle = null;
+    messengerGuy = null;
+    threatSignOpened = false;
+    threatSignClicked = false;
+    bullets = [];
+    particles = [];
+    activeMidWaveBombers = [];
+
+
+    wave = targetWave;
+
+
+    // Automatically manage path state based on selected target wave
+    newPathUnlocked = (targetWave > 6);
+    newPath2Unlocked = (targetWave > 12);
+
+
+    let minimalExpectedScrap = Math.round(150 + (targetWave * 60));
+    if (scrap < minimalExpectedScrap) {
+        scrap = minimalExpectedScrap;
+    }
+
+
+    updateUI();
+    
+    const waveBtn = document.getElementById('wave-btn');
+    if (targetWave <= 30) {
+        waveBtn.disabled = false;
+        waveBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'hidden');
+    } else {
+        waveBtn.disabled = true;
+        waveBtn.classList.add('hidden');
+    }
+
+
+    let desc = "";
+    if (targetWave === 6) desc = "Jumped to Wave 6: Shortcut Bulldozer!";
+    else if (targetWave === 12) desc = "Jumped to Wave 12: Highway Cut!";
+    else if (targetWave === 15) desc = "Jumped to Wave 15: Raider Messenger!";
+    else if (targetWave === 16) desc = "Jumped to Wave 16: Goliath Boss Tank!";
+    else if (targetWave === 21) desc = "Jumped to Wave 21: Extreme bike bomber air raid!";
+    else if (targetWave === 25) desc = "Jumped to Wave 25: Doomsday crawler titan!";
+    else if (targetWave === 30) desc = "Jumped to Wave 30: World Ender & End Strike!";
+    else desc = `Quantum jumped directly to Wave ${targetWave}!`;
+
+
+    showStatus(`🚀 ${desc.toUpperCase()}`);
+    showFloatingText(400, 200, `WAVE ${targetWave} RECONSTITUTED`, "#10b981");
+    
+    initWastelandDebris();
+}
+
+
+function resetGame() {
+    scrap = 220;
+    health = 20;
+    wave = 1;
+    selectedTowerType = 'gunner';
+    selectedTowerCost = 100;
+    isPaused = false;
+    screenShake = 0;
+    scorchedEarth = [];
+    
+    activeSelectedTower = null;
+    isAdminUnlocked = false;
+    isGodMode = false;
+    isSniperMode = false;
+    sniperScore = 0;
+    
+    enemies = [];
+    towers = [];
+    bullets = [];
+    particles = [];
+    creatures = [];
+    rogueRacers = [];
+    activeMidWaveBombers = [];
+
+
+    isInfiniteMode = false;
+    endgameChoiceActive = false;
+    
+    waveInProgress = false;
+    spawnTimer = 0;
+    enemiesToSpawn = 0;
+    frameCount = 0;
+    
+    cutsceneActive = false;
+    newPathUnlocked = false;
+    newPath2Unlocked = false;
+    cutsceneVehicle = null;
+    messengerGuy = null;
+    threatSignOpened = false;
+    threatSignClicked = false;
+
+
+    nukeActive = false;
+    nukeTimer = 0;
+    nukePhase = 0;
+    
+    document.getElementById('sniper-hud').classList.add('hidden');
+    document.getElementById('mainframe-unlocked-panel').classList.add('hidden');
+    document.getElementById('mainframe-trigger').classList.remove('hidden');
+    document.getElementById('infinite-nuke-btn').classList.add('hidden');
+
+
+    const waveBtn = document.getElementById('wave-btn');
+    waveBtn.disabled = false;
+    waveBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'hidden');
+    
+    const pBtn = document.getElementById('pause-btn');
+    pBtn.innerHTML = `<i class="fa-solid fa-pause"></i> PAUSE`;
+    pBtn.classList.replace('bg-emerald-600', 'bg-amber-500');
+    
+    initWastelandDebris();
+    updateUI();
+    document.getElementById('status-bar').style.opacity = 0;
+    showFloatingText(400, 200, "🔄 GAME RESTARTED", "#f59e0b");
+}
+
+
+function setGameSpeed(speed) {
+    if (nukeActive) return;
+    gameSpeed = speed;
+    document.querySelectorAll('[id^="speed-"]').forEach(btn => {
+        btn.classList.replace('bg-amber-500', 'bg-amber-950');
+        btn.classList.replace('text-black', 'text-amber-400');
+    });
+    const activeBtn = document.getElementById(`speed-${speed}x`);
+    activeBtn.classList.replace('bg-amber-950', 'bg-amber-500');
+    activeBtn.classList.replace('text-amber-400', 'text-black');
+    showFloatingText(400, 60, `SPEED: ${speed}x`, "#60a5fa");
+}
+
+
+function cheatAddScrap() {
+    scrap += 5000;
+    updateUI();
+    showFloatingText(400, 200, "⚙️ +5,000 SCRAP", "#10b981");
+}
+
+
+function cheatCitadelRepair() {
+    health += 1000;
+    updateUI();
+    showFloatingText(400, 200, "❤️ HP RESTORED", "#ef4444");
+}
+
+
+function cheatToggleGodMode() {
+    isGodMode = !isGodMode;
+    const gBtn = document.getElementById('godmode-btn');
+    if (isGodMode) {
+        gBtn.classList.replace('bg-stone-900', 'bg-emerald-950');
+        gBtn.classList.add('text-emerald-300', 'border-emerald-500');
+        gBtn.innerHTML = "<i class='fa-solid fa-heart-circle-bolt'></i> God Mode: ON 🔱";
+        showFloatingText(400, 200, "🔱 GOD MODE ACTIVE", "#10b981");
+    } else {
+        gBtn.classList.replace('bg-emerald-950', 'bg-stone-900');
+        gBtn.classList.remove('text-emerald-300', 'border-emerald-500');
+        gBtn.innerHTML = "<i class='fa-solid fa-heart-circle-bolt'></i> God Mode: OFF 🔱";
+        showFloatingText(400, 200, "GOD SHIELD CLOSED", "#f59e0b");
+    }
+    updateUI();
+}
+
+
+function cheatWipeWave() {
+    if (enemies.length === 0 && !waveInProgress) {
+        showFloatingText(400, 200, "NO ACTIVE TARGETS", "#fbbf24");
+        return;
+    }
+    let hasMegaTank = enemies.some(e => e.type === 'mega_tank');
+    if (hasMegaTank || wave === 30) {
+        triggerNukeCounterstrike();
+        enemies = [];
+        enemiesToSpawn = 0;
+        return;
+    }
+    enemies.forEach(e => { e.hp = 0; });
+    enemiesToSpawn = 0;
+    showFloatingText(400, 200, "💥 WAVE WIPED", "#ef4444");
+}
+
+
+function cheatSkipWave() {
+    skipWave();
+}
+
+
+function selectTowerForUpgrade(t) {
+    activeSelectedTower = t;
+    document.getElementById('upgrade-empty-state').classList.add('hidden');
+    document.getElementById('upgrade-active-state').classList.remove('hidden');
+    
+    const upgTitle = document.getElementById('upg-title');
+    const upgType = document.getElementById('upg-type');
+    const upgRange = document.getElementById('upg-range');
+    const upgNextRange = document.getElementById('upg-next-range');
+    const upgDmg = document.getElementById('upg-dmg');
+    const upgNextDmg = document.getElementById('upg-next-dmg');
+    const upgRate = document.getElementById('upg-rate');
+    const upgNextRate = document.getElementById('upg-next-rate');
+    const upgCost = document.getElementById('upg-cost');
+    
+    let lvl = t.level || 1;
+    let cost = lvl * 100; 
+    
+    upgTitle.innerText = `Bunker Lvl ${lvl}`;
+    upgType.innerText = t.type.toUpperCase();
+    upgRange.innerText = Math.round(t.range);
+    upgNextRange.innerText = Math.round(t.range * 1.15);
+    upgDmg.innerText = Math.round(t.damage);
+    upgNextDmg.innerText = Math.round(t.damage * 1.2);
+    upgRate.innerText = Math.round(t.fireRate);
+    upgNextRate.innerText = Math.round(t.fireRate * 0.85); 
+    upgCost.innerText = cost;
+}
+
+
+function performTowerUpgrade() {
+    if (!activeSelectedTower) return;
+    let lvl = activeSelectedTower.level || 1;
+    let cost = lvl * 100; 
+    
+    if (scrap >= cost) {
+        scrap -= cost;
+        activeSelectedTower.level = lvl + 1;
+        activeSelectedTower.range *= 1.15;
+        activeSelectedTower.damage *= 1.2;
+        activeSelectedTower.fireRate = Math.max(5, Math.round(activeSelectedTower.fireRate * 0.85));
+        
+        updateUI();
+        selectTowerForUpgrade(activeSelectedTower); 
+        showFloatingText(activeSelectedTower.x, activeSelectedTower.y - 25, `LVL ${lvl + 1} UPGRADED!`, "#10b981");
+    } else {
+        showFloatingText(activeSelectedTower.x, activeSelectedTower.y - 25, "NEED SCRAP!", "#ef4444");
+    }
+}
+
+
+function triggerPathCutscene(type) {
+    cutsceneActive = true;
+    cutsceneTimer = 0;
+    cutscenePhase = 1;
+    cutsceneType = type;
+    
+    activeSelectedTower = null;
+    document.getElementById('upgrade-empty-state').classList.remove('hidden');
+    document.getElementById('upgrade-active-state').classList.add('hidden');
+    
+    if (type === 'wave6') {
+        let dx = 580 - 180;
+        let dy = 300 - 200;
+        cutsceneVehicle = {
+            x: 180,
+            y: 200,
+            speed: 0.40, 
+            angle: Math.atan2(dy, dx), 
+            type: 'dozer',
+            size: 26,
+            color: '#dc2626'
+        };
+        showStatus("⚠️ WARNING: HEAVY DOZER DETECTED! INTRUDERS BLASTING A NEW ROUTE!");
+    } 
+    else if (type === 'wave12') {
+        cutsceneVehicle = {
+            x: 180,
+            y: 200,
+            speed: 0.50, 
+            angle: 0,
+            type: 'dozer',
+            size: 28,
+            color: '#eab308', 
+            waypoints: [
+                {x: 240, y: 330},
+                {x: 740, y: 330},
+                {x: 780, y: 300}
+            ],
+            wpIdx: 0
+        };
+        showStatus("🚧 HIGH INDUSTRIAL THREAT: CAT-BULLDOZER EXCAVATING BOTTOM HIGHWAY BYPASS!");
+    }
+    else if (type === 'wave15') {
+        threatSignClicked = false;
+        threatSignOpened = false;
+        
+        cutsceneVehicle = {
+            x: -60,
+            y: 200,
+            speed: 0.60, 
+            angle: 0,
+            type: 'bike_messenger', 
+            color: '#7f1d1d'
+        };
+
+
+        messengerGuy = {
+            x: -60,
+            y: 200,
+            state: 'riding', 
+            targetX: 380,
+            targetY: 155,
+            progress: 0,
+            bombTimer: 0,
+            dynamiteX: 0,
+            dynamiteY: 0,
+            dynamiteProgress: 0
+        };
+
+
+        showStatus("⚠️ WARNING: HOSTILE OUTLAW MESSENGER INBOUND EN ROUTE TO OUTPOST!");
+    }
+    else if (type === 'wave21') {
+        bomberThrowTimer = 0;
+        cutsceneVehicle = {
+            x: -20,
+            y: 200,
+            speed: 0.25, 
+            angle: 0,
+            type: 'bike_bomber',
+            color: '#f59e0b',
+            targetTowers: [...towers].slice(0, 4) 
+        };
+        showStatus("🚀 SABOTEUR ALARM: EXTREME BIKE BOMBER DEPLOYED OVER BUNKERS!");
+    }
+}
+
+
+function triggerMidWaveBomber() {
+    if (towers.length === 0) return;
+    showStatus("🚀 ALERT: SABOTEUR BOMBER INBOUND OVER ACTIVE BATTLEFIELD!");
+    
+    activeMidWaveBombers.push({
+        x: -50,
+        y: 150,
+        speed: 3.5,
+        type: 'bike_bomber',
+        color: '#ef4444',
+        targetTowers: [...towers].slice(0, 4),
+        cooldown: 0
+    });
+}
+
+
+function triggerEndgameChoice() {
+    endgameChoiceActive = true;
+    isPaused = true;
+    screenShake = 10;
+    showStatus("⚠️ CRITICAL ALERT: WORLD ENDER DESTROYED! CITADEL SECURED?");
+}
+
+
+canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
+    const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
+
+
+    // Handle end-game branching option selection
+    if (endgameChoiceActive) {
+        // Option A (Engage Final Strike): x [180, 390], y [250, 295]
+        if (x >= 180 && x <= 390 && y >= 250 && y <= 295) {
+            endgameChoiceActive = false;
+            triggerNukeCounterstrike();
+        }
+        // Option B (Keep Going - Infinite): x [410, 620], y [250, 295]
+        if (x >= 410 && x <= 620 && y >= 250 && y <= 295) {
+            endgameChoiceActive = false;
+            isInfiniteMode = true;
+            isPaused = false;
+            wave = 31;
+            scrap += 250; 
+            updateUI();
+            
+            // Expose the persistent final strike manual launch toggle
+            document.getElementById('infinite-nuke-btn').classList.remove('hidden');
+            
+            showStatus("🔥 PROTOCOL INITIATED: ENTERING INFINITE WASTELAND MODE! FIGHT UNTIL THE BITTER END!");
+            showFloatingText(400, 200, "☣️ INFINITE MODE ACTIVATED", "#ef4444");
+        }
+        return;
+    }
+
+
+    if (cutsceneActive && cutsceneType === 'wave15') {
+        if (messengerGuy && messengerGuy.state === 'taunting' && !threatSignOpened) {
+            let distToSign = Math.sqrt((x - threatSignX)**2 + (y - threatSignY)**2);
+            let distToGuy = Math.sqrt((x - messengerGuy.x)**2 + (y - messengerGuy.y)**2);
+            if (distToSign < 45 || distToGuy < 45) {
+                threatSignOpened = true;
+                showFloatingText(x, y, "✉️ DECRYPTING...", "#fbbf24");
+            }
+        } else if (threatSignOpened) {
+            if (x >= 175 && x <= 625 && y >= 80 && y <= 320) {
+                threatSignOpened = false;
+                threatSignClicked = true;
+                showFloatingText(x, y, "💥 COURIER THREAT DECODED!", "#ef4444");
+                showStatus("🚨 DEMAND DECLINED: 'WE WILL NEVER SURRENDER!' PREPARE THE OUTPOST FOR RETALIATION!");
+            }
+        }
+        return;
+    }
+
+
+    if (cutsceneActive || isPaused || nukeActive) return; 
+
+
+    if (isSniperMode) {
+        for (let p = 0; p < 15; p++) {
+            particles.push({
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8,
+                life: 15,
+                size: Math.random() * 3 + 1,
+                color: '#ef4444'
+            });
+        }
+        showFloatingText(x, y - 10, "💥 SNIPED!", "#f87171");
+
+
+        for (let i = creatures.length - 1; i >= 0; i--) {
+            let c = creatures[i];
+            let dist = Math.sqrt((c.x - x)**2 + (c.y - y)**2);
+            let hitRange = c.type === 'buzzard' ? 24 : 18;
+            if (dist < hitRange) {
+                for (let b = 0; b < 25; b++) {
+                    particles.push({
+                        x: c.x, y: c.y,
+                        vx: (Math.random() - 0.5) * 6,
+                        vy: (Math.random() - 0.5) * 6,
+                        life: 30,
+                        size: Math.random() * 4 + 1.5,
+                        color: '#7f1d1d' 
+                    });
+                }
+                showFloatingText(c.x, c.y - 20, "🎯 +1 SNIPE", "#fbbf24");
+                creatures.splice(i, 1);
+                sniperScore++;
+                document.getElementById('snipe-txt').innerText = sniperScore;
+                return; 
+            }
+        }
+        return; 
+    }
+
+
+    let clickedTower = null;
+    for (let t of towers) {
+        let dist = Math.sqrt((t.x - x)**2 + (t.y - y)**2);
+        if (dist < 25) {
+            clickedTower = t;
+            break;
+        }
+    }
+    
+    if (clickedTower) {
+        selectTowerForUpgrade(clickedTower);
+        return;
+    }
+
+
+    if (isCloseToPath(x, y, 28) || 
+        (newPathUnlocked && isCloseToSpecificPath(x, y, path2, 28)) ||
+        (newPath2Unlocked && isCloseToSpecificPath(x, y, path3, 28))) {
+        showFloatingText(x, y - 10, "CANNOT PLOT ON PATH", "#ef4444");
+        return;
+    }
+
+
+    for (let t of towers) {
+        let d = Math.sqrt((t.x - x)**2 + (t.y - y)**2);
+        if (d < 30) {
+            showFloatingText(x, y - 10, "TOO CLOSE!", "#ef4444");
+            return;
+        }
+    }
+
+
+    activeSelectedTower = null;
+    document.getElementById('upgrade-empty-state').classList.remove('hidden');
+    document.getElementById('upgrade-active-state').classList.add('hidden');
+
+
+    if (scrap >= selectedTowerCost) {
+        const spec = towerSpecs[selectedTowerType];
+        let newBunker = {
+            x: x, y: y,
+            type: selectedTowerType,
+            range: spec.range,
+            fireRate: spec.fireRate,
+            damage: spec.damage,
+            color: spec.color,
+            barrelLen: spec.barrelLen,
+            colorBarrel: spec.colorBarrel,
+            bulletSize: spec.bulletSize,
+            cooldown: 0,
+            angle: 0,
+            level: 1
+        };
+        towers.push(newBunker);
+        scrap -= selectedTowerCost;
+        updateUI();
+        showFloatingText(x, y - 20, "BUNKER PLOTTED", "#34d399");
+    } else {
+        showFloatingText(x, y - 10, "NEED MORE SCRAP", "#f87171");
+    }
+});
+
+
+function selectTower(type, cost) {
+    selectedTowerType = type;
+    selectedTowerCost = cost;
+    document.querySelectorAll('.shop-btn').forEach(b => b.classList.remove('selected'));
+    document.getElementById(`btn-${type}`).classList.add('selected');
+}
+
+
+function startWave() {
+    if (waveInProgress || enemies.length > 0 || cutsceneActive || isPaused || nukeActive) return;
+    
+    if (wave === 15) {
+        triggerPathCutscene('wave15');
+        return;
+    }
+    if (wave === 21) {
+        triggerPathCutscene('wave21');
+        return;
+    }
+
+
+    // Occasional Bomber ambush attacks in Infinite Mode
+    if (isInfiniteMode && Math.random() < 0.35) {
+        setTimeout(() => {
+            if (isPaused || nukeActive) return;
+            triggerMidWaveBomber();
+        }, Math.random() * 8000 + 4000);
+    }
+
+
+    waveInProgress = true;
+    enemiesToSpawn = 5 + wave * 3; 
+    document.getElementById('wave-btn').disabled = true;
+    document.getElementById('wave-btn').classList.add('opacity-50', 'cursor-not-allowed');
+}
+
+
+function skipWave() {
+    if (cutsceneActive || nukeActive) return;
+    
+    if (wave === 30) {
+        triggerEndgameChoice();
+        return;
+    }
+    
+    enemies.forEach(e => { e.hp = -100; });
+    enemies = [];
+    enemiesToSpawn = 0;
+    
+    advanceWave();
+}
+
+
+function advanceWave() {
+    if (waveInProgress) {
+        waveInProgress = false;
+        if (wave === 6) {
+            triggerPathCutscene('wave6');
+        } else if (wave === 12) {
+            triggerPathCutscene('wave12');
+        } else {
+            if (wave === 30) {
+                triggerEndgameChoice();
+            } else {
+                wave++;
+                scrap += 30; 
+                updateUI();
+                if (wave <= 30 || isInfiniteMode) {
+                    document.getElementById('wave-btn').disabled = false;
+                    document.getElementById('wave-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    document.getElementById('wave-btn').classList.add('hidden');
+                }
+            }
+        }
+    } else {
+        if (wave === 6) {
+            triggerPathCutscene('wave6');
+        } else if (wave === 12) {
+            triggerPathCutscene('wave12');
+        } else {
+            if (wave === 30) {
+                triggerEndgameChoice();
+            } else {
+                wave++;
+                scrap += 30;
+                updateUI();
+                if (wave <= 30 || isInfiniteMode) {
+                    document.getElementById('wave-btn').disabled = false;
+                    document.getElementById('wave-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    document.getElementById('wave-btn').classList.add('hidden');
+                }
+            }
+        }
+    }
+}
+
+
+function triggerKamikaze() {
+    if (isPaused || nukeActive) return;
+    if (scrap >= 50 && enemies.length > 0) {
+        scrap -= 50;
+        updateUI();
+       
+        let targets = [...enemies].slice(0, 3);
+        targets.forEach((target, index) => {
+            setTimeout(() => {
+                if (isPaused) return;
+                target.hp -= 150;
+                for (let p = 0; p < 25; p++) {
+                    particles.push({
+                        x: target.x, y: target.y,
+                        vx: (Math.random() - 0.5) * 12,
+                        vy: (Math.random() - 0.5) * 12,
+                        life: 45,
+                        size: Math.random() * 5 + 3,
+                        color: Math.random() > 0.4 ? '#ef4444' : '#f59e0b'
+                    });
+                }
+            }, index * 180);
+        });
+        showFloatingText(400, 200, "💥 WITNESS ME BOMB", "#ef4444");
+    }
+}
+
+
+function triggerNukeCounterstrike() {
+    nukeActive = true;
+    isPaused = true;
+    nukeTimer = 0;
+    nukePhase = 1;
+    nukeMissile = {
+        x: nukeSiloX,
+        y: nukeSiloY + 40,
+        targetX: 400, 
+        targetY: 220,
+        angle: -Math.PI / 2,
+        progress: 0
+    };
+    
+    document.getElementById('wave-btn').classList.add('hidden');
+    document.getElementById('infinite-nuke-btn').classList.add('hidden');
+    
+    screenShake = 3;
+    showStatus("🚨 TACTICAL COMMAND: CHARGING RETALIATION SILOS!");
+}
+
+
+function isCloseToPath(px, py, maxDist) {
+    if (isCloseToSpecificPath(px, py, path, maxDist)) return true;
+    if (newPathUnlocked && isCloseToSpecificPath(px, py, path2, maxDist)) return true;
+    if (newPath2Unlocked && isCloseToSpecificPath(px, py, path3, maxDist)) return true;
+    return false;
+}
+
+
+function isCloseToSpecificPath(px, py, targetedPath, maxDist) {
+    for (let i = 0; i < targetedPath.length - 1; i++) {
+        let p1 = targetedPath[i]; let p2 = targetedPath[i+1];
+        let A = px - p1.x; let B = py - p1.y;
+        let C = p2.x - p1.x; let D = p2.y - p1.y;
+        let dot = A * C + B * D;
+        let lenSq = C * C + D * D;
+        let param = lenSq !== 0 ? dot / lenSq : -1;
+        let xx, yy;
+        if (param < 0) { xx = p1.x; yy = p1.y; }
+        else if (param > 1) { xx = p2.x; yy = p2.y; }
+        else { xx = p1.x + param * C; yy = p1.y + param * D; }
+        let dx = px - xx; let dy = py - yy;
+        if (Math.sqrt(dx * dx + dy * dy) < maxDist) return true;
+    }
+    return false;
+}
+
+
+function updateUI() {
+    document.getElementById('scrap-txt').innerText = scrap;
+    document.getElementById('health-txt').innerText = isGodMode ? "INVINCIBLE" : health;
+    document.getElementById('wave-txt').innerText = wave;
+}
+
+
+function updateNukeCounterstrike() {
+    nukeTimer++;
+    
+    if (nukePhase >= 1 && nukePhase <= 4) {
+        if (frameCount % 60 === 0) {
+            screenShake = Math.max(screenShake, 5);
+        }
+    }
+
+
+    if (nukePhase === 1) {
+        if (nukeTimer < 90) {
+            showStatus("🚨 COORDINATES LOCKED: BANDIT STRONGHOLD VECTOR ACQUIRED!");
+        } else if (nukeTimer < 180) {
+            showStatus("🚀 SILO CRADLE OPENING... ENGAGING THERMAL IGNITION MATRIX!");
+        } else if (nukeTimer < 270) {
+            showStatus("🔥 DANGER: ENGINE PRESSURE MAXIMUM. STAND CLEAR OF CITADEL LAUNCH PLATFORM!");
+        } else {
+            nukePhase = 2;
+            nukeTimer = 0;
+            screenShake = 16; 
+        }
+
+
+        if (frameCount % 3 === 0) {
+            particles.push({
+                x: nukeSiloX + (Math.random() - 0.5) * 30,
+                y: nukeSiloY + (Math.random() - 0.5) * 10,
+                vx: (Math.random() - 0.5) * 4,
+                vy: -Math.random() * 2 - 2, 
+                life: 55,
+                size: Math.random() * 10 + 5,
+                color: '#e2e8f0'
+            });
+        }
+    }
+    else if (nukePhase === 2) {
+        nukeMissile.y -= 2.2; 
+        screenShake = 10;
+        showStatus("🚀 INTRUDER RETRIBUTION: STRATEGIC NUKE ENGAGED! ASCENDING TO APEX HEIGHT!");
+
+
+        for (let k = 0; k < 3; k++) {
+            particles.push({
+                x: nukeMissile.x + (Math.random() - 0.5) * 12,
+                y: nukeMissile.y + 15,
+                vx: (Math.random() - 0.5) * 5,
+                vy: Math.random() * 2 + 2,
+                life: 45,
+                size: Math.random() * 14 + 6,
+                color: Math.random() > 0.45 ? '#ea580c' : (Math.random() > 0.3 ? '#ef4444' : '#7c2d12')
+            });
+        }
+
+
+        if (nukeMissile.y < -120) {
+            nukePhase = 3;
+            nukeTimer = 0;
+        }
+    }
+    else if (nukePhase === 3) {
+        showStatus("🛰️ TELEMETRY SECURED: INTERMEDIATE BALLISTIC APEX DETECTED. PREPARING DESCEND G-VECTOR!");
+        screenShake = 1.5;
+
+
+        if (nukeTimer > 180) { 
+            nukePhase = 4;
+            nukeTimer = 0;
+            nukeMissile.x = -150;
+            nukeMissile.y = -100;
+        }
+    }
+    else if (nukePhase === 4) {
+        showStatus("⚠️ TERMINAL IMPACT INBOUND! ACQUIRING RAIDER FORTRESS VECTOR!");
+        
+        let dx = nukeMissile.targetX - nukeMissile.x;
+        let dy = nukeMissile.targetY - nukeMissile.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        
+        nukeMissile.angle = Math.atan2(dy, dx);
+        
+        if (dist < 10) {
+            nukePhase = 5;
+            nukeTimer = 0;
+            screenShake = 42; 
+            
+            for (let sc = 0; sc < 6; sc++) {
+                scorchedEarth.push({
+                    x: nukeMissile.targetX + (Math.random() - 0.5) * 110,
+                    y: nukeMissile.targetY + (Math.random() - 0.5) * 110,
+                    radius: Math.random() * 45 + 35
+                });
+            }
+        } else {
+            nukeMissile.x += (dx/dist) * 3.5; 
+            nukeMissile.y += (dy/dist) * 3.5;
+
+
+            for (let j = 0; j < 3; j++) {
+                particles.push({
+                    x: nukeMissile.x,
+                    y: nukeMissile.y,
+                    vx: -Math.cos(nukeMissile.angle) * 2 + (Math.random() - 0.5) * 2,
+                    vy: -Math.sin(nukeMissile.angle) * 2 + (Math.random() - 0.5) * 2,
+                    life: 20,
+                    size: Math.random() * 8 + 4,
+                    color: '#f97316'
+                });
+            }
+        }
+    }
+    else if (nukePhase === 5) {
+        if (nukeTimer < 320) { 
+            if (nukeTimer % 2 === 0) {
+                let rX = 200 + Math.random() * 400;
+                let rY = 100 + Math.random() * 250;
+                for (let k = 0; k < 6; k++) {
+                    particles.push({
+                        x: rX,
+                        y: rY,
+                        vx: (Math.random() - 0.5) * 18,
+                        vy: (Math.random() - 0.5) * 18,
+                        life: 70 + Math.random() * 30, 
+                        size: Math.random() * 26 + 14,
+                        color: Math.random() > 0.5 ? '#e11d48' : (Math.random() > 0.3 ? '#f97316' : '#fbbf24')
+                    });
+                }
+            }
+        } else {
+            nukePhase = 6;
+            nukeTimer = 0;
+        }
+    }
+
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].x += particles[i].vx;
+        particles[i].y += particles[i].vy;
+        particles[i].life--;
+        if (particles[i].life <= 0) particles.splice(i, 1);
+    }
+}
+
+
+function drawRaiderBaseScreen(ctx) {
+    ctx.fillStyle = '#1c1917';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(0, 0, canvas.width, 110);
+    
+    let isDemolished = (nukePhase === 5 && nukeTimer > 20) || nukePhase === 6;
+    let collapseProgress = 0;
+    if (nukePhase === 5) {
+        collapseProgress = Math.min(1.0, nukeTimer / 120);
+    } else if (nukePhase === 6) {
+        collapseProgress = 1.0;
+    }
+
+
+    ctx.fillStyle = '#44403c';
+    ctx.strokeStyle = '#0c0a09';
+    ctx.lineWidth = 3;
+    
+    for (let x = 50; x < canvas.width; x += 100) {
+        if (isDemolished) {
+            ctx.fillStyle = '#1c1917';
+            ctx.fillRect(x - 20, 120, 40, 10);
+            ctx.strokeStyle = '#e11d48';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x - 20, 120, 40, 10);
+        } else {
+            ctx.fillRect(x - 20, 110, 40, 20);
+            ctx.beginPath();
+            ctx.moveTo(x - 10, 110);
+            ctx.lineTo(x, 80);
+            ctx.lineTo(x + 10, 110);
+            ctx.fill();
+        }
+    }
+    
+    if (isDemolished) {
+        ctx.fillStyle = '#140c08';
+        ctx.beginPath();
+        ctx.moveTo(280, 320);
+        ctx.bezierCurveTo(320, 320 + (50 * collapseProgress), 430, 320 + (50 * collapseProgress), 520, 320);
+        ctx.lineTo(520 + (10 * collapseProgress), 320);
+        ctx.lineTo(280 - (10 * collapseProgress), 320);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#7c2d12';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+
+        ctx.strokeStyle = '#ea580c';
+        ctx.lineWidth = 2.5;
+        for (let bx = 300; bx <= 500; bx += 30) {
+            ctx.beginPath();
+            ctx.moveTo(bx, 320);
+            ctx.lineTo(bx + (Math.sin(bx) * 15 * (1 - collapseProgress)), 180 + (140 * collapseProgress));
+            ctx.stroke();
+        }
+    } else {
+        ctx.fillStyle = '#262626';
+        ctx.beginPath();
+        ctx.moveTo(280, 320);
+        ctx.lineTo(330, 180);
+        ctx.lineTo(470, 180);
+        ctx.lineTo(520, 320);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.fillStyle = '#3f3f46';
+        ctx.beginPath();
+        ctx.arc(400, 180, 45, Math.PI, 0);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#27272a';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(370, 140); ctx.lineTo(355, 110);
+        ctx.moveTo(430, 140); ctx.lineTo(445, 110);
+        ctx.stroke();
+    }
+    
+    if (!isDemolished) {
+        ctx.fillStyle = '#7f1d1d';
+        ctx.fillRect(400, 80, 60, 35);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 18px Courier New';
+        ctx.fillText("☠", 420, 105);
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(400, 80);
+        ctx.lineTo(400, 180);
+        ctx.stroke();
+    } else {
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(400, 130 + (collapseYVal = Math.min(50, nukeTimer * 0.4)));
+        ctx.lineTo(400, 180);
+        ctx.stroke();
+    }
+    
+    if (isDemolished) {
+        ctx.fillStyle = '#0f172a';
+        ctx.save();
+        ctx.translate(120, 220);
+        ctx.rotate(-0.8);
+        ctx.fillRect(-15, -40, 30, 80);
+        ctx.restore();
+
+
+        ctx.save();
+        ctx.translate(650, 240);
+        ctx.rotate(0.9);
+        ctx.fillRect(-15, -30, 30, 60);
+        ctx.restore();
+    } else {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(120, 150, 30, 150);
+        ctx.fillRect(650, 150, 30, 150);
+        
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(110, 130, 50, 20);
+        ctx.fillRect(640, 130, 50, 20);
+    }
+    
+    if (nukePhase === 4) {
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.15)';
+        ctx.beginPath();
+        ctx.moveTo(135, 130);
+        ctx.lineTo(60, 0);
+        ctx.lineTo(260, 0);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.moveTo(665, 130);
+        ctx.lineTo(540, 0);
+        ctx.lineTo(740, 0);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+
+    if (nukePhase >= 5) {
+        if (frameCount % 4 === 0) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: canvas.height + 10,
+                vx: (Math.random() - 0.5) * 1.5,
+                vy: -Math.random() * 2 - 1,
+                life: 60,
+                size: Math.random() * 3.5 + 1.5,
+                color: Math.random() > 0.4 ? '#f97316' : '#ef4444'
+            });
+        }
+    }
+}
+
+
+function updateGame() {
+    if (health <= 0 && !isGodMode) return;
+    
+    if (nukeActive) {
+        updateNukeCounterstrike();
+        return;
+    }
+
+
+    if (isPaused) return;
+    
+    if (cutsceneActive) {
+        cutsceneTimer++;
+        
+        if (cutsceneType === 'wave6') {
+            if (cutscenePhase === 1) {
+                let targetX = 580;
+                let targetY = 300;
+                let dx = targetX - cutsceneVehicle.x;
+                let dy = targetY - cutsceneVehicle.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < 4) {
+                    cutscenePhase = 2;
+                    cutsceneTimer = 0;
+                    newPathUnlocked = true; 
+                } else {
+                    cutsceneVehicle.x += (dx / dist) * cutsceneVehicle.speed;
+                    cutsceneVehicle.y += (dy / dist) * cutsceneVehicle.speed;
+                    
+                    if (cutsceneTimer % 3 === 0) {
+                        particles.push({
+                            x: cutsceneVehicle.x + (Math.random() - 0.5) * 10,
+                            y: cutsceneVehicle.y + (Math.random() - 0.5) * 10,
+                            vx: (Math.random() - 0.5) * 2,
+                            vy: -0.2,
+                            life: 25,
+                            size: Math.random() * 6 + 2,
+                            color: '#c2410c'
+                        });
+                    }
+                }
+            } 
+            else if (cutscenePhase === 2) {
+                if (cutsceneTimer > 100) { 
+                    cutsceneActive = false;
+                    newPathUnlocked = true;
+                    cutsceneVehicle = null;
+                    
+                    wave = 7;
+                    scrap += 30;
+                    updateUI();
+                    
+                    document.getElementById('wave-btn').disabled = false;
+                    document.getElementById('wave-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+                    document.getElementById('status-bar').style.opacity = 0;
+                    initWastelandDebris();
+                }
+            }
+        }
+        else if (cutsceneType === 'wave12') {
+            if (cutscenePhase === 1) {
+                let targetWP = cutsceneVehicle.waypoints[cutsceneVehicle.wpIdx];
+                let dx = targetWP.x - cutsceneVehicle.x;
+                let dy = targetWP.y - cutsceneVehicle.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                
+                cutsceneVehicle.angle = Math.atan2(dy, dx);
+                
+                if (dist < 4) {
+                    cutsceneVehicle.wpIdx++;
+                    if (cutsceneVehicle.wpIdx >= cutsceneVehicle.waypoints.length) {
+                        cutscenePhase = 2;
+                        cutsceneTimer = 0;
+                        newPath2Unlocked = true;
+                    }
+                } else {
+                    cutsceneVehicle.x += (dx / dist) * cutsceneVehicle.speed;
+                    cutsceneVehicle.y += (dy / dist) * cutsceneVehicle.speed;
+                    if (cutsceneTimer % 3 === 0) {
+                        particles.push({
+                            x: cutsceneVehicle.x + (Math.random() - 0.5) * 12,
+                            y: cutsceneVehicle.y + (Math.random() - 0.5) * 12,
+                            vx: (Math.random() - 0.5) * 3,
+                            vy: -0.2,
+                            life: 25,
+                            size: Math.random() * 6 + 3,
+                            color: '#ea580c'
+                        });
+                    }
+                }
+            }
+            else if (cutscenePhase === 2) {
+                if (cutsceneTimer > 100) { 
+                    cutsceneActive = false;
+                    newPath2Unlocked = true;
+                    cutsceneVehicle = null;
+                    
+                    wave = 13;
+                    scrap += 30;
+                    updateUI();
+                    
+                    document.getElementById('wave-btn').disabled = false;
+                    document.getElementById('wave-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+                    document.getElementById('status-bar').style.opacity = 0;
+                    initWastelandDebris();
+                }
+            }
+        }
+        else if (cutsceneType === 'wave15') {
+            if (messengerGuy) {
+                if (messengerGuy.state === 'riding') {
+                    let dx = 280 - cutsceneVehicle.x;
+                    let dy = 200 - cutsceneVehicle.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 4) {
+                        messengerGuy.state = 'disembarking';
+                        cutsceneVehicle.x = 280;
+                        cutsceneVehicle.y = 200;
+                        showStatus("🚨 THE MESSENGER STOPPED! HE IS GETTING OFF THE CUSTOM CHOPPER!");
+                    } else {
+                        cutsceneVehicle.x += (dx/dist) * cutsceneVehicle.speed;
+                        cutsceneVehicle.y += (dy/dist) * cutsceneVehicle.speed;
+                        messengerGuy.x = cutsceneVehicle.x;
+                        messengerGuy.y = cutsceneVehicle.y;
+                        
+                        if (frameCount % 4 === 0) {
+                            particles.push({
+                                x: cutsceneVehicle.x - 18,
+                                y: cutsceneVehicle.y + 2,
+                                vx: -1.5,
+                                vy: (Math.random() - 0.5) * 1,
+                                life: 20,
+                                size: Math.random() * 5 + 2,
+                                color: '#1c1917'
+                            });
+                        }
+                    }
+                }
+                else if (messengerGuy.state === 'disembarking') {
+                    messengerGuy.y -= 0.6;
+                    if (messengerGuy.y <= 175) {
+                        messengerGuy.state = 'walking';
+                        showStatus("🚜 HE IS WALKING ACROSS THE WASTELAND DUNES TO PLANT THE ULTIMATUM!");
+                    }
+                }
+                else if (messengerGuy.state === 'walking') {
+                    let dx = messengerGuy.targetX - messengerGuy.x;
+                    let dy = messengerGuy.targetY - messengerGuy.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 3) {
+                        messengerGuy.state = 'planting';
+                        messengerGuy.progress = 0;
+                    } else {
+                        messengerGuy.x += (dx/dist) * 0.9;
+                        messengerGuy.y += (dy/dist) * 0.9;
+                    }
+                }
+                else if (messengerGuy.state === 'planting') {
+                    messengerGuy.progress += 1;
+                    
+                    if (messengerGuy.progress % 12 === 0) {
+                        for (let p = 0; p < 4; p++) {
+                            particles.push({
+                                x: threatSignX,
+                                y: threatSignY + 12,
+                                vx: (Math.random() - 0.5) * 3,
+                                vy: -Math.random() * 2 - 1,
+                                life: 15,
+                                size: Math.random() * 2 + 1,
+                                color: '#d97706' 
+                            });
+                        }
+                        showFloatingText(threatSignX, threatSignY - 10, "🔨 BAM!", "#f59e0b");
+                    }
+
+
+                    if (messengerGuy.progress > 65) {
+                        messengerGuy.state = 'taunting';
+                        threatSignOpened = false;
+                        showStatus("📢 WARNING PLANTED! CLICK THE SIGN POST TO OPEN THEIR ULTRA REBEL DEMANDS!");
+                    }
+                }
+                else if (messengerGuy.state === 'taunting') {
+                    if (threatSignClicked) {
+                        messengerGuy.state = 'throwing_bomb';
+                        messengerGuy.progress = 0;
+                        messengerGuy.dynamiteX = messengerGuy.x;
+                        messengerGuy.dynamiteY = messengerGuy.y;
+                        showStatus("🚨 THE MESSENGER REFUSED SUBMISSION! HE LIT A BUNDLE OF DYNAMITE!");
+                    }
+                }
+                else if (messengerGuy.state === 'throwing_bomb') {
+                    messengerGuy.progress += 0.02;
+                    let arcY = 60;
+                    let destX = 420;
+                    let destY = 200;
+                    
+                    messengerGuy.dynamiteX = messengerGuy.x + (destX - messengerGuy.x) * messengerGuy.progress;
+                    messengerGuy.dynamiteY = messengerGuy.y + (destY - messengerGuy.y) * messengerGuy.progress - Math.sin(messengerGuy.progress * Math.PI) * arcY;
+
+
+                    particles.push({
+                        x: messengerGuy.dynamiteX,
+                        y: messengerGuy.dynamiteY,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: (Math.random() - 0.5) * 2,
+                        life: 12,
+                        size: Math.random() * 3 + 1,
+                        color: '#f59e0b'
+                    });
+
+
+                    if (messengerGuy.progress >= 1.0) {
+                        screenShake = 12;
+                        for (let b = 0; b < 30; b++) {
+                            particles.push({
+                                x: destX,
+                                y: destY,
+                                vx: (Math.random() - 0.5) * 10,
+                                vy: (Math.random() - 0.5) * 10,
+                                life: 35,
+                                size: Math.random() * 6 + 2.5,
+                                color: Math.random() > 0.4 ? '#ef4444' : '#ea580c'
+                            });
+                        }
+                        showFloatingText(destX, destY, "💥 BOOM!", "#ef4444");
+                        
+                        messengerGuy.state = 'returning';
+                    }
+                }
+                else if (messengerGuy.state === 'returning') {
+                    let dx = 280 - messengerGuy.x;
+                    let dy = 200 - messengerGuy.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 4) {
+                        messengerGuy.state = 'escaping';
+                        showStatus("🏍️ THE COURIER IN ESCAPE VEHICLE! PREPARE YOUR OUTPOST FOR ENEMY ARMOR!");
+                    } else {
+                        messengerGuy.x += (dx/dist) * 1.5;
+                        messengerGuy.y += (dy/dist) * 1.5;
+                    }
+                }
+                else if (messengerGuy.state === 'escaping') {
+                    cutsceneVehicle.x += 4.5;
+                    messengerGuy.x = cutsceneVehicle.x;
+                    messengerGuy.y = cutsceneVehicle.y;
+                    
+                    if (cutsceneVehicle.x > canvas.width + 55) {
+                        cutsceneActive = false;
+                        cutsceneVehicle = null;
+                        messengerGuy = null;
+                        document.getElementById('status-bar').style.opacity = 0;
+                        
+                        waveInProgress = false;
+                        wave = 16;
+                        updateUI();
+                        document.getElementById('wave-btn').disabled = false;
+                        document.getElementById('wave-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+                        showStatus("🚨 DEFENSES READY! COMMENCE AND DESTROY THE GOLIATH FORTRESS TANK!");
+                    }
+                }
+            }
+        }
+        else if (cutsceneType === 'wave21') {
+            if (cutscenePhase === 1) {
+                let targetX = 350;
+                let targetY = 180;
+                let dx = targetX - cutsceneVehicle.x;
+                let dy = targetY - cutsceneVehicle.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < 4) {
+                    cutscenePhase = 2;
+                    cutsceneTimer = 0;
+                } else {
+                    cutsceneVehicle.x += (dx/dist) * cutsceneVehicle.speed;
+                    cutsceneVehicle.y += (dy/dist) * cutsceneVehicle.speed;
+                }
+            }
+            else if (cutscenePhase === 2) {
+                bomberThrowTimer++;
+                const throwIntervals = [45, 105, 165, 225];
+                throwIntervals.forEach((tVal, idx) => {
+                    if (bomberThrowTimer === tVal && cutsceneVehicle.targetTowers.length > idx) {
+                        let targetT = cutsceneVehicle.targetTowers[idx];
+                        if (towers.includes(targetT)) {
+                            bullets.push({
+                                startX: cutsceneVehicle.x,
+                                startY: cutsceneVehicle.y,
+                                x: cutsceneVehicle.x,
+                                y: cutsceneVehicle.y,
+                                target: targetT,
+                                isDynamite: true,
+                                speed: 0.015, 
+                                progress: 0,
+                                damage: 999, 
+                                color: '#ef4444'
+                            });
+                            showFloatingText(cutsceneVehicle.x, cutsceneVehicle.y, "💣 BOMBS AWAY!", "#ef4444");
+                        }
+                    }
+                });
+                
+                if (bomberThrowTimer > 310) {
+                    cutscenePhase = 3;
+                    cutsceneTimer = 0;
+                }
+            }
+            else if (cutscenePhase === 3) {
+                cutsceneVehicle.x += cutsceneVehicle.speed * 2.5;
+                if (cutsceneVehicle.x > canvas.width + 40) {
+                    cutsceneActive = false;
+                    cutsceneVehicle = null;
+                    document.getElementById('status-bar').style.opacity = 0;
+                    
+                    waveInProgress = false;
+                    wave = 22;
+                    updateUI();
+                    document.getElementById('wave-btn').disabled = false;
+                    document.getElementById('wave-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+                    showStatus("🚨 SABOTEURS IN RETREAT! READY SYSTEMS AND SEND CONVOY 22!");
+                }
+            }
+        }
+        
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            let b = bullets[i];
+            if (b.isDynamite) {
+                if (!towers.includes(b.target)) {
+                    bullets.splice(i, 1);
+                    continue;
+                }
+                
+                b.progress += b.speed;
+                
+                if (b.progress >= 1.0) {
+                    let tIdx = towers.indexOf(b.target);
+                    if (tIdx > -1) {
+                        towers.splice(tIdx, 1);
+                    }
+                    for (let p = 0; p < 25; p++) {
+                        particles.push({
+                            x: b.target.x, y: b.target.y,
+                            vx: (Math.random() - 0.5) * 8,
+                            vy: (Math.random() - 0.5) * 8,
+                            life: 30,
+                            size: Math.random() * 5 + 2,
+                            color: '#ea580c'
+                        });
+                    }
+                    showFloatingText(b.target.x, b.target.y, "💥 DESTROYED!", "#ef4444");
+                    bullets.splice(i, 1);
+                } else {
+                    let arcHeight = 75; 
+                    b.x = b.startX + (b.target.x - b.startX) * b.progress;
+                    b.y = b.startY + (b.target.y - b.startY) * b.progress - Math.sin(b.progress * Math.PI) * arcHeight;
+                }
+            }
+        }
+        
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].x += particles[i].vx;
+            particles[i].y += particles[i].vy;
+            particles[i].life--;
+            if (particles[i].life <= 0) particles.splice(i, 1);
+        }
+        return; 
+    }
+
+
+    // Update mid-wave bombers
+    for (let i = activeMidWaveBombers.length - 1; i >= 0; i--) {
+        let b = activeMidWaveBombers[i];
+        b.x += b.speed;
+        
+        if (b.cooldown > 0) b.cooldown--;
+        
+        for (let j = b.targetTowers.length - 1; j >= 0; j--) {
+            let t = b.targetTowers[j];
+            if (towers.includes(t) && Math.abs(b.x - t.x) < 30 && b.cooldown === 0) {
+                bullets.push({
+                    startX: b.x,
+                    startY: b.y,
+                    x: b.x,
+                    y: b.y,
+                    target: t,
+                    isDynamite: true,
+                    speed: 0.02,
+                    progress: 0,
+                    damage: 999,
+                    color: '#ef4444'
+                });
+                showFloatingText(b.x, b.y, "💣 BOMBS DROPPED!", "#ef4444");
+                b.cooldown = 45; 
+                b.targetTowers.splice(j, 1); 
+                break;
+            }
+        }
+        
+        if (b.x > canvas.width + 80) {
+            activeMidWaveBombers.splice(i, 1);
+        }
+    }
+
+
+    if (waveInProgress) {
+        spawnTimer++;
+        if (spawnTimer > 100) { 
+            spawnTimer = 0;
+            if (enemiesToSpawn > 0) {
+                if (wave === 16) {
+                    enemies.push({
+                        type: "supertank",
+                        x: bossStraightPath[0].x, y: bossStraightPath[0].y,
+                        targetIdx: 1,
+                        speed: 0.18, 
+                        hp: 12000,   
+                        maxHp: 12000,
+                        reward: 100,
+                        size: 32,
+                        color: '#1e293b',
+                        name: "GOLIATH FORTRESS TANK",
+                        angle: 0,
+                        pathRef: bossStraightPath
+                    });
+                    enemiesToSpawn = 0;
+                }
+                else if (wave === 25) {
+                    enemies.push({
+                        type: "crawler_titan",
+                        x: crawlerTitanPath[0].x, y: crawlerTitanPath[0].y,
+                        targetIdx: 1,
+                        speed: 0.22, 
+                        hp: 16000,
+                        maxHp: 16000,
+                        reward: 150,
+                        size: 36,
+                        color: '#111827',
+                        name: "DOOMSDAY MECH-CRAWLER",
+                        angle: 0,
+                        pathRef: crawlerTitanPath 
+                    });
+                    enemiesToSpawn = 0;
+                }
+                else if (wave === 30) {
+                    enemies.push({
+                        type: "mega_tank",
+                        x: bossStraightPath[0].x, y: bossStraightPath[0].y,
+                        targetIdx: 1,
+                        speed: 0.12, 
+                        hp: 24000,  
+                        maxHp: 24000,
+                        reward: 500,
+                        size: 50,    
+                        color: '#020617', 
+                        name: "WORLD ENDER MEGA TANK",
+                        angle: 0,
+                        pathRef: bossStraightPath
+                    });
+                    enemiesToSpawn = 0;
+                }
+                else {
+                    let rVal = Math.random();
+                    let type = "pups"; 
+                   
+                    // Mix in huge all-terrain armor sub-bosses during Infinite Mode
+                    if (isInfiniteMode && rVal > 0.85) {
+                        let bossType = Math.random() > 0.5 ? "crawler_titan" : "supertank";
+                        let activePath = bossType === "crawler_titan" ? crawlerTitanPath : bossStraightPath;
+                        enemies.push({
+                            type: bossType,
+                            x: activePath[0].x, y: activePath[0].y,
+                            targetIdx: 1,
+                            speed: bossType === "crawler_titan" ? 0.28 : 0.22,
+                            hp: (bossType === "crawler_titan" ? 12000 : 9000) * (1 + (wave - 30) * 0.25),
+                            maxHp: (bossType === "crawler_titan" ? 12000 : 9000) * (1 + (wave - 30) * 0.25),
+                            reward: 120,
+                            size: bossType === "crawler_titan" ? 36 : 32,
+                            color: bossType === "crawler_titan" ? '#111827' : '#1e293b',
+                            name: bossType === "crawler_titan" ? "DOOMSDAY CRAWLER" : "GOLIATH FORTRESS",
+                            angle: 0,
+                            pathRef: activePath
+                        });
+                    } else {
+                        if (rVal > 0.8 && wave > 2) {
+                            type = "tanker"; 
+                        } else if (rVal > 0.4 && wave > 1) {
+                            type = "buggy"; 
+                        }
+
+
+                        let hpMultiplier = 1 + wave * 0.45; 
+                        if (wave === 17 || wave === 18 || wave === 22 || wave === 23) {
+                            hpMultiplier = 0.8; 
+                        }
+                        
+                        if (wave === 1) {
+                            hpMultiplier = 0.35;
+                        } else if (wave === 2) {
+                            hpMultiplier = 0.5;
+                        }
+                        
+                        let activePathRef = path;
+                        if (newPath2Unlocked && Math.random() > 0.6) activePathRef = path3;
+                        else if (newPathUnlocked && Math.random() > 0.4) activePathRef = path2;
+                       
+                        if (type === "tanker") {
+                            enemies.push({
+                                type: "tanker",
+                                x: activePathRef[0].x, y: activePathRef[0].y,
+                                targetIdx: 1,
+                                speed: (wave <= 2) ? 0.25 : 0.35, 
+                                hp: 180 * hpMultiplier,
+                                maxHp: 180 * hpMultiplier,
+                                reward: 22,
+                                size: 20,
+                                color: '#2d3748',
+                                name: "People Eater War Rig",
+                                angle: 0,
+                                pathRef: activePathRef
+                            });
+                        } else if (type === "buggy") {
+                            enemies.push({
+                                type: "buggy",
+                                x: activePathRef[0].x, y: activePathRef[0].y,
+                                targetIdx: 1,
+                                speed: (wave <= 2) ? 0.45 : 0.75, 
+                                hp: 75 * hpMultiplier,
+                                maxHp: 75 * hpMultiplier,
+                                reward: 12,
+                                size: 14,
+                                color: '#b45309',
+                                name: "Marauder Spike Buggy",
+                                angle: 0,
+                                pathRef: activePathRef
+                            });
+                        } else {
+                            enemies.push({
+                                type: "pups",
+                                x: activePathRef[0].x, y: activePathRef[0].y,
+                                targetIdx: 1,
+                                speed: (wave <= 2) ? 0.6 : 1.1, 
+                                hp: 35 * hpMultiplier,
+                                maxHp: 35 * hpMultiplier,
+                                reward: 6,
+                                size: 10,
+                                color: '#4a5568',
+                                name: "Scavenger War Pup",
+                                angle: 0,
+                                pathRef: activePathRef
+                            });
+                        }
+                    }
+                    enemiesToSpawn--;
+                }
+            }
+        }
+    }
+
+
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        let e = enemies[i];
+        if (e.hp <= 0) {
+            if (e.hp > -90) {
+                scrap += e.reward;
+                updateUI();
+                showFloatingText(e.x, e.y, `+${e.reward}⚙️`, "#fbbf24");
+                
+                if (e.type === 'mega_tank') {
+                    triggerEndgameChoice();
+                }
+            }
+           
+            for (let d = 0; d < 12; d++) {
+                particles.push({
+                    x: e.x, y: e.y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    life: 25,
+                    size: Math.random() * 3 + 1,
+                    color: '#78350f'
+                });
+            }
+            enemies.splice(i, 1);
+            continue;
+        }
+       
+        let target = e.pathRef[e.targetIdx];
+        let dx = target.x - e.x;
+        let dy = target.y - e.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+       
+        e.angle = Math.atan2(dy, dx);
+
+
+        if (e.type === 'supertank' || e.type === 'mega_tank' || e.type === 'crawler_titan') {
+            let crushRange = e.type === 'mega_tank' ? 65 : (e.type === 'crawler_titan' ? 55 : 45);
+            for (let j = towers.length - 1; j >= 0; j--) {
+                let t = towers[j];
+                let d = Math.sqrt((t.x - e.x)**2 + (t.y - e.y)**2);
+                if (d < crushRange) { 
+                    towers.splice(j, 1);
+                    showFloatingText(t.x, t.y, "💥 CRUSHED!", "#ef4444");
+                    
+                    for (let p = 0; p < 20; p++) {
+                        particles.push({
+                            x: t.x, y: t.y,
+                            vx: (Math.random() - 0.5) * 5,
+                            vy: (Math.random() - 0.5) * 5,
+                            life: 20,
+                            size: Math.random() * 4 + 1.5,
+                            color: '#92400e'
+                        });
+                    }
+                }
+            }
+        }
+
+
+        if (dist < Math.max(2.0, e.speed)) {
+            e.targetIdx++;
+            if (e.targetIdx >= e.pathRef.length) {
+                let structuralDamage = 1;
+                if (e.type === 'buggy') structuralDamage = 2;
+                if (e.type === 'tanker') structuralDamage = 4;
+                if (e.type === 'supertank') structuralDamage = 10;
+                if (e.type === 'crawler_titan') structuralDamage = 15;
+                if (e.type === 'mega_tank') structuralDamage = 9999; 
+                
+                if (!isGodMode) {
+                    health = Math.max(0, health - structuralDamage);
+                }
+                updateUI();
+                enemies.splice(i, 1);
+            }
+        } else {
+            e.x += (dx / dist) * e.speed;
+            e.y += (dy / dist) * e.speed;
+        }
+    }
+
+
+    if (enemiesToSpawn === 0 && enemies.length === 0 && waveInProgress) {
+        waveInProgress = false;
+        
+        if (wave === 6) {
+            triggerPathCutscene('wave6');
+        } else if (wave === 12) {
+            triggerPathCutscene('wave12');
+        } else {
+            if (wave === 30) {
+                triggerEndgameChoice();
+            } else {
+                wave++;
+                scrap += 30;
+                updateUI();
+                if (wave <= 30 || isInfiniteMode) {
+                    document.getElementById('wave-btn').disabled = false;
+                    document.getElementById('wave-btn').classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    document.getElementById('wave-btn').classList.add('hidden');
+                }
+            }
+        }
+    }
+
+
+    towers.forEach(t => {
+        if (t.cooldown > 0) t.cooldown--;
+        if (enemies.length > 0) {
+            let target = null;
+            let minDist = t.range;
+           
+            enemies.forEach(e => {
+                let dist = Math.sqrt((e.x - t.x)**2 + (e.y - t.y)**2);
+                if (dist < minDist) {
+                    minDist = dist;
+                    target = e;
+                }
+            });
+           
+            if (target) {
+                t.angle = Math.atan2(target.y - t.y, target.x - t.x);
+               
+                if (t.cooldown === 0) {
+                    bullets.push({
+                        x: t.x + Math.cos(t.angle) * t.barrelLen,
+                        y: t.y + Math.sin(t.angle) * t.barrelLen,
+                        target: target,
+                        speed: t.type === 'cannon' ? 5 : 8,
+                        damage: t.damage,
+                        color: t.type === 'flamer' ? '#ff4500' : '#111827',
+                        type: t.type,
+                        originAngle: t.angle
+                    });
+                    t.cooldown = t.fireRate;
+                }
+            }
+        }
+    });
+
+
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        let b = bullets[i];
+        if (b.isDynamite) continue; 
+        
+        if (!enemies.includes(b.target)) {
+            bullets.splice(i, 1);
+            continue;
+        }
+       
+        let dx = b.target.x - b.x;
+        let dy = b.target.y - b.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+       
+        if (dist < b.speed) {
+            b.target.hp -= b.damage;
+           
+            if (b.type === 'cannon') {
+                enemies.forEach(other => {
+                    if (other !== b.target) {
+                        let innerDist = Math.sqrt((other.x - b.x)**2 + (other.y - b.y)**2);
+                        if (innerDist < 65) {
+                            other.hp -= b.damage * 0.5; 
+                        }
+                    }
+                });
+               
+                for (let s = 0; s < 18; s++) {
+                    particles.push({
+                        x: b.x, y: b.y,
+                        vx: (Math.random() - 0.5) * 6,
+                        vy: (Math.random() - 0.5) * 6,
+                        life: 25,
+                        size: Math.random() * 4 + 1,
+                        color: '#d97706'
+                    });
+                }
+            } else if (b.type === 'flamer') {
+                particles.push({
+                    x: b.x, y: b.y,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    life: 15,
+                    size: Math.random() * 3 + 2,
+                    color: '#ea580c'
+                });
+            } else {
+                particles.push({
+                    x: b.x, y: b.y,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3,
+                    life: 10,
+                    size: 1.5,
+                    color: '#f59e0b'
+                });
+            }
+           
+            bullets.splice(i, 1);
+        } else {
+            b.x += (dx / dist) * b.speed;
+            b.y += (dy / dist) * b.speed;
+        }
+    }
+
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].x += particles[i].vx;
+        particles[i].y += particles[i].vy;
+        particles[i].life--;
+        if (particles[i].life <= 0) particles.splice(i, 1);
+    }
+}
+
+
+function updateBackground() {
+    frameCount++;
+
+
+    if (isPaused || nukeActive) return;
+
+
+    if (frameCount % 450 === 0 && Math.random() < 0.25) {
+        spawnCreature();
+    }
+    
+    if (frameCount % 350 === 0 && Math.random() < 0.25) {
+        spawnBuzzard();
+    }
+    
+    if (frameCount % 1200 === 0 && !cutsceneActive) {
+        if (Math.random() > 0.5) {
+            spawnRogueRacer();
+        } else {
+            spawnMotorcycleGang();
+        }
+    }
+
+
+    for (let i = 0; i < creatures.length; i++) {
+        let c1 = creatures[i];
+        if (c1.type === 'coyote') {
+            for (let j = i + 1; j < creatures.length; j++) {
+                let c2 = creatures[j];
+                if (c2.type === 'coyote') {
+                    let dVal = Math.sqrt((c1.x - c2.x)**2 + (c1.y - c2.y)**2);
+                    if (dVal < 25) {
+                        let pushAngle = Math.atan2(c1.y - c2.y, c1.x - c2.x);
+                        c1.x += Math.cos(pushAngle) * 0.6;
+                        c1.y += Math.sin(pushAngle) * 0.6;
+                        c2.x -= Math.cos(pushAngle) * 0.6;
+                        c2.y -= Math.sin(pushAngle) * 0.6;
+                    }
+                }
+            }
+        }
+    }
+
+
+    for (let i = creatures.length - 1; i >= 0; i--) {
+        let c = creatures[i];
+        
+        if (c.type === 'buzzard') {
+            c.circleAngle += c.circleSpeed;
+            c.centerX += c.speedX;
+            c.centerY += c.speedY;
+            c.x = c.centerX + Math.cos(c.circleAngle) * c.circleRadius;
+            c.y = c.centerY + Math.sin(c.circleAngle) * c.circleRadius;
+            c.angle = c.circleAngle + Math.PI / 2; 
+            
+            if (c.centerX < -200 || c.centerX > canvas.width + 200 || c.centerY < -200 || c.centerY > canvas.height + 200) {
+                creatures.splice(i, 1);
+            }
+            continue;
+        }
+
+
+        if (c.type === 'snake') {
+            c.legCycle += 0.05; 
+        } else if (c.type === 'rabbit') {
+            c.legCycle += 0.04;
+            c.jumpState = Math.abs(Math.sin(c.legCycle)) * 7;
+        } else {
+            c.legCycle += c.speed * 0.3;
+        }
+
+
+        c.changeDirTimer--;
+        if (c.changeDirTimer <= 0) {
+            c.angle = Math.random() * Math.PI * 2;
+            c.changeDirTimer = Math.random() * 250 + 200;
+        }
+
+
+        c.x = c.x + Math.cos(c.angle) * c.speed;
+        c.y = c.y + Math.sin(c.angle) * (c.type === 'rabbit' ? c.speed * 1.5 : c.speed);
+
+
+        if (c.x < -60 || c.x > canvas.width + 60 || c.y < -60 || c.y > canvas.height + 60) {
+            creatures.splice(i, 1);
+        }
+    }
+
+
+    for (let i = rogueRacers.length - 1; i >= 0; i--) {
+        let r = rogueRacers[i];
+        
+        let closestDist = 999;
+        let closestObj = null;
+
+
+        for (let t of towers) {
+            let d = Math.sqrt((t.x - r.x)**2 + (t.y - r.y)**2);
+            if (d < 80 && d < closestDist) {
+                closestDist = d;
+                closestObj = t;
+            }
+        }
+        for (let db of debrisList) {
+            let d = Math.sqrt((db.x - r.x)**2 + (db.y - r.y)**2);
+            if (d < 80 && d < closestDist) {
+                closestDist = d;
+                closestObj = db;
+            }
+        }
+
+
+        if (closestObj && closestDist < 80) {
+            if (r.isReckless === undefined) {
+                r.isReckless = Math.random() < 0.25; 
+            }
+            if (!r.isReckless) {
+                let diffY = r.y - closestObj.y;
+                r.vy += (diffY > 0 ? 0.04 : -0.08); 
+                r.vy = Math.max(-0.6, Math.min(0.6, r.vy));
+            }
+        }
+
+
+        let nextX = r.x + r.vx;
+        let nextY = r.y + r.vy;
+
+
+        if (r.type === 'ratrod') {
+            r.wheelieTimer++;
+            if (r.wheelieTimer > 120) { 
+                r.isWheelie = !r.isWheelie;
+                r.wheelieTimer = 0;
+            }
+            r.wheelieAngle = Math.sin(frameCount * 0.15) * 0.03 + (r.isWheelie ? -0.11 : 0); 
+        }
+
+
+        let deltaX = Math.abs(r.x - nextX);
+        let deltaY = Math.abs(r.y - nextY);
+        if (deltaX < 0.02 && deltaY < 0.02) {
+            r.stuckTimer++;
+        } else {
+            r.stuckTimer = 0;
+        }
+
+
+        r.x = nextX;
+        r.y = nextY;
+        
+        r.dustTimer++;
+        if (r.dustTimer % 3 === 0) { 
+            particles.push({
+                x: r.x - (r.vx > 0 ? 18 : -18), 
+                y: r.y + 7,
+                vx: -r.vx * 0.15 + (Math.random() - 0.5) * 0.4, 
+                vy: -0.05 + (Math.random() - 0.5) * 0.3,
+                life: 30,
+                size: Math.random() * 10 + 5,
+                color: '#ca8a04' 
+            });
+        }
+
+
+        if (r.type === 'ratrod' && frameCount % 12 === 0) {
+            particles.push({
+                x: r.x + (r.vx > 0 ? 4 : -4),
+                y: r.y - 4,
+                vx: (r.vx > 0 ? 0.5 : -0.5),
+                vy: -Math.random() * 1.5,
+                life: 12,
+                size: Math.random() * 4 + 2,
+                color: Math.random() > 0.45 ? '#ea580c' : '#fbbf24'
+            });
+        }
+
+
+        let hasCrashed = false;
+        for (let t of towers) {
+            let dist = Math.sqrt((t.x - r.x)**2 + (t.y - r.y)**2);
+            if (dist < 32) {
+                hasCrashed = true;
+                break;
+            }
+        }
+        if (!hasCrashed) {
+            for (let db of debrisList) {
+                let dist = Math.sqrt((db.x - r.x)**2 + (db.y - r.y)**2);
+                if (dist < 32) {
+                    hasCrashed = true;
+                    break;
+                }
+            }
+        }
+
+
+        if (hasCrashed || r.stuckTimer > 45) {
+            for (let p = 0; p < 35; p++) {
+                particles.push({
+                    x: r.x, y: r.y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    life: Math.random() * 35 + 20,
+                    size: Math.random() * 6 + 2,
+                    color: Math.random() > 0.45 ? '#ea580c' : '#7c2d12'
+                });
+            }
+            rogueRacers.splice(i, 1);
+            continue;
+        }
+
+
+        if (r.x > canvas.width + 60 || r.y < -30 || r.y > canvas.height + 60) {
+            rogueRacers.splice(i, 1);
+        }
+    }
+}
+
+
+function drawDynamicRoadSegment(ctx, baseWaypoints, currentVehicle, activeWPIndex) {
+    ctx.beginPath();
+    ctx.moveTo(baseWaypoints[0].x, baseWaypoints[0].y);
+    
+    for (let j = 1; j < 2 + activeWPIndex; j++) {
+        if (baseWaypoints[j]) {
+            let distToVec = Math.sqrt((baseWaypoints[j].x - currentVehicle.x)**2 + (baseWaypoints[j].y - currentVehicle.y)**2);
+            if (baseWaypoints[j].x < currentVehicle.x || distToVec < 10) {
+                ctx.lineTo(baseWaypoints[j].x, baseWaypoints[j].y);
+            }
+        }
+    }
+    ctx.lineTo(currentVehicle.x, currentVehicle.y);
+    ctx.stroke();
+}
+
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+
+    ctx.save();
+    
+    if (screenShake > 0) {
+        let dx = (Math.random() - 0.5) * screenShake;
+        let dy = (Math.random() - 0.5) * screenShake;
+        ctx.translate(dx, dy);
+        screenShake *= 0.94; 
+        if (screenShake < 0.1) screenShake = 0;
+    }
+
+
+    if (nukeActive && nukePhase >= 4) {
+        if (nukePhase <= 5) {
+            drawRaiderBaseScreen(ctx);
+            
+            if (nukePhase === 4) {
+                ctx.save();
+                ctx.translate(nukeMissile.x, nukeMissile.y);
+                ctx.rotate(nukeMissile.angle + Math.PI / 2);
+                ctx.fillStyle = '#cbd5e1';
+                ctx.fillRect(-6, -24, 12, 48);
+                ctx.fillStyle = '#b91c1c';
+                ctx.beginPath();
+                ctx.moveTo(-6, -24);
+                ctx.lineTo(0, -40);
+                ctx.lineTo(6, -24);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            } else if (nukePhase === 5) {
+                let flashAlpha = Math.max(0, 1 - nukeTimer / 130);
+                ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha * 0.98})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.strokeStyle = `rgba(239, 68, 68, ${flashAlpha})`;
+                ctx.lineWidth = 18;
+                ctx.beginPath();
+                ctx.arc(nukeMissile.targetX, nukeMissile.targetY, nukeTimer * 5.2, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.strokeStyle = `rgba(249, 115, 22, ${flashAlpha * 0.8})`;
+                ctx.lineWidth = 12;
+                ctx.beginPath();
+                ctx.arc(nukeMissile.targetX, nukeMissile.targetY, nukeTimer * 3.8, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        } else if (nukePhase === 6) {
+            drawRaiderBaseScreen(ctx);
+
+
+            ctx.fillStyle = 'rgba(9, 5, 3, 0.75)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'bold 36px "Courier New"';
+            ctx.textAlign = 'center';
+            ctx.fillText("🏆 CITADEL SECURED! 🏆", canvas.width / 2, canvas.height / 2 - 45);
+
+
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = 'bold 15px "Courier New"';
+            ctx.fillText("THE WASTELAND IS SECURE. RAIDER BASE TOTALLY NEUTRALIZED!", canvas.width / 2, canvas.height / 2 + 10);
+            
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '11px "Courier New"';
+            ctx.fillText(`SNIPER HITS REGISTERED: ${sniperScore} | WEAPONS CONSTRUCTED: ${towers.length}`, canvas.width / 2, canvas.height / 2 + 50);
+
+
+            ctx.fillStyle = '#b45309';
+            ctx.fillRect(canvas.width / 2 - 80, canvas.height / 2 + 85, 160, 35);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px "Courier New"';
+            ctx.fillText("RUN THE ROAD AGAIN", canvas.width / 2, canvas.height / 2 + 106);
+        }
+        
+        particles.forEach(p => {
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, p.size || 2.5, p.size || 2.5);
+        });
+        
+        ctx.restore();
+        return; 
+    }
+
+
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+
+    scorchedEarth.forEach(sc => {
+        ctx.fillStyle = 'rgba(28, 25, 23, 0.75)'; 
+        ctx.beginPath();
+        ctx.arc(sc.x, sc.y, sc.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0c0a09';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+    });
+   
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, 80);
+    ctx.quadraticCurveTo(200, 150, 400, 80);
+    ctx.quadraticCurveTo(600, 20, 800, 120);
+    ctx.stroke();
+
+
+    ctx.beginPath();
+    ctx.moveTo(0, 280);
+    ctx.quadraticCurveTo(300, 220, 500, 320);
+    ctx.quadraticCurveTo(700, 390, 800, 300);
+    ctx.stroke();
+
+
+    creatures.forEach(c => {
+        ctx.save();
+        ctx.translate(c.x, c.y);
+        
+        let facingLeft = Math.cos(c.angle) < 0;
+        
+        if (c.type === 'snake') {
+            ctx.rotate(Math.max(-0.3, Math.min(0.3, c.angle))); 
+            ctx.fillStyle = '#15803d'; 
+            const segmentCount = 10;
+            const segmentSpacing = 3;
+            for (let s = 0; s < segmentCount; s++) {
+                let waveOffset = Math.sin(c.legCycle - s * 0.5) * 3.5;
+                ctx.beginPath();
+                ctx.arc(-s * segmentSpacing, waveOffset, 4 - (s * 0.25), 0, Math.PI * 2);
+                ctx.fill();
+                
+                if (s === 0) { 
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(1.5, -1, 1, 1);
+                }
+                ctx.fillStyle = '#15803d';
+            }
+        } 
+        else if (c.type === 'coyote') {
+            if (facingLeft) {
+                ctx.scale(-1, 1);
+            } else {
+                ctx.scale(1, 1);
+            }
+            ctx.fillStyle = '#a16207'; 
+            
+            let legSwing = Math.sin(c.legCycle) * 5;
+            ctx.fillRect(-6, 3, 2, 6 + legSwing); 
+            ctx.fillRect(4, 3, 2, 6 - legSwing);  
+            ctx.fillRect(-6, -6, 2, 6 - legSwing); 
+            ctx.fillRect(4, -6, 2, 6 + legSwing);  
+            
+            ctx.fillRect(-9, -4, 18, 8);
+            
+            ctx.fillStyle = '#854d0e';
+            ctx.fillRect(7, -3, 6, 6);
+            ctx.fillStyle = '#ffffff'; 
+            ctx.fillRect(11, -1, 3, 2);
+            
+            ctx.fillStyle = '#451a03';
+            ctx.beginPath();
+            ctx.moveTo(8, -3);
+            ctx.lineTo(5, -8);
+            ctx.lineTo(10, -3);
+            ctx.fill();
+            
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(-13, -1, 5, 2.5);
+        } 
+        else if (c.type === 'rabbit') {
+            if (facingLeft) {
+                ctx.scale(-1, 1);
+            } else {
+                ctx.scale(1, 1);
+            }
+            ctx.fillStyle = '#ca8a04'; 
+            
+            ctx.translate(0, -c.jumpState);
+            ctx.fillRect(-5, -3, 10, 6); 
+            
+            ctx.fillRect(4, -4, 4, 4);
+            ctx.fillStyle = '#a16207';
+            ctx.fillRect(5, -9, 1.5, 6); 
+            ctx.fillRect(3.5, -9, 1.5, 6);
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-6, -1, 2, 0, Math.PI*2);
+            ctx.fill();
+        }
+        else if (c.type === 'lizard') {
+            if (facingLeft) {
+                ctx.scale(-1, 1);
+            } else {
+                ctx.scale(1, 1);
+            }
+            ctx.fillStyle = '#16a34a'; 
+            
+            ctx.fillRect(-11, -3.5, 22, 7);
+            
+            ctx.fillStyle = '#15803d';
+            let tailWiggle = Math.sin(c.legCycle) * 5;
+            ctx.beginPath();
+            ctx.moveTo(-11, 0);
+            ctx.quadraticCurveTo(-18, tailWiggle, -24, tailWiggle * 1.5);
+            ctx.lineTo(-11, -1);
+            ctx.closePath();
+            ctx.fill();
+            
+            let footSwing = Math.sin(c.legCycle) * 4;
+            ctx.fillStyle = '#16a34a';
+            ctx.fillRect(-6, 3.5, 2.5, 4 + footSwing);
+            ctx.fillRect(4, 3.5, 2.5, 4 - footSwing);
+            ctx.fillRect(-6, -7.5, 2.5, 4 - footSwing);
+            ctx.fillRect(4, -7.5, 2.5, 4 + footSwing);
+            
+            ctx.fillStyle = '#15803d';
+            ctx.fillRect(11, -2.5, 4, 5);
+        }
+        else if (c.type === 'buzzard') {
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.45)'; 
+            ctx.beginPath();
+            ctx.arc(0, 14, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#1e293b'; 
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 2.2, 1.5, 0, 0, Math.PI*2);
+            ctx.fill();
+            
+            let wingSpan = 4; 
+            let flap = Math.sin(frameCount * 0.3) * 3;
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 1.0;
+            
+            ctx.beginPath();
+            ctx.moveTo(-0.5, 0);
+            ctx.lineTo(-wingSpan, -flap);
+            ctx.moveTo(0.5, 0);
+            ctx.lineTo(wingSpan, -flap);
+            ctx.stroke();
+
+
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.arc(1.5, -0.5, 0.6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    });
+
+
+    rogueRacers.forEach(r => {
+        ctx.save();
+        ctx.translate(r.x, r.y);
+        
+        if (r.vx < 0) {
+            ctx.scale(-1, 1);
+        }
+
+
+        ctx.rotate(r.wheelieAngle);
+
+
+        if (r.type === 'ratrod') {
+            ctx.fillStyle = '#111827';
+            ctx.beginPath();
+            ctx.arc(-16, 4, 11, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#f8fafc'; 
+            ctx.beginPath();
+            ctx.arc(-16, 4, 7.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#475569'; 
+            ctx.beginPath();
+            ctx.arc(-16, 4, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+
+
+            ctx.fillStyle = '#111827';
+            ctx.beginPath();
+            ctx.arc(16, 7, 7.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#f8fafc'; 
+            ctx.beginPath();
+            ctx.arc(16, 7, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#94a3b8';
+            ctx.beginPath();
+            ctx.arc(16, 7, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+
+            ctx.fillStyle = '#1c1917';
+            ctx.fillRect(-18, 1, 32, 5);
+
+
+            ctx.fillStyle = '#5c220f';
+            ctx.beginPath();
+            ctx.moveTo(-20, 2);
+            ctx.lineTo(-20, -7); 
+            ctx.lineTo(-4, -7);  
+            ctx.lineTo(2, -1);    
+            ctx.lineTo(4, 3);
+            ctx.closePath();
+            ctx.fill();
+
+
+            ctx.strokeStyle = '#451a03';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(-21, -8);
+            ctx.lineTo(-3, -8);
+            ctx.stroke();
+
+
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(3, -3, 10, 6);
+            ctx.fillStyle = '#cbd5e1'; 
+            ctx.fillRect(8, -5, 6, 3);
+            ctx.fillStyle = '#ef4444'; 
+            ctx.beginPath();
+            ctx.arc(14, -3.5, 1.5, 0, Math.PI*2);
+            ctx.fill();
+
+
+            ctx.fillStyle = '#fef08a'; 
+            ctx.beginPath();
+            ctx.arc(16, 2, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        } 
+        else {
+            ctx.fillStyle = '#111827';
+            ctx.beginPath();
+            ctx.arc(-11, 6, 6, 0, Math.PI*2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(11, 6, 6, 0, Math.PI*2);
+            ctx.fill();
+
+
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(-11, 6);
+            ctx.lineTo(0, 5);
+            ctx.lineTo(11, 6);
+            ctx.lineTo(4, -3);
+            ctx.closePath();
+            ctx.stroke();
+
+
+            ctx.beginPath();
+            ctx.moveTo(4, -3);
+            ctx.lineTo(6, -10);
+            ctx.stroke();
+
+
+            ctx.fillStyle = '#7c2d12';
+            ctx.fillRect(-5, -4, 7, 8);
+            
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(-8, -10, 2, 6);
+            ctx.fillRect(-2, -11, 2, 5);
+
+
+            ctx.fillStyle = '#ea580c';
+            ctx.beginPath();
+            ctx.arc(-1, -7.5, 4, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(1.5, -8.5, 2, 2);
+        }
+        ctx.restore();
+    });
+
+
+    ctx.strokeStyle = '#292524';
+    ctx.lineWidth = 36;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(path[0].x, path[0].y);
+    path.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.stroke();
+
+
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([12, 18]);
+    ctx.beginPath();
+    ctx.moveTo(path[0].x, path[0].y);
+    path.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.stroke();
+    ctx.setLineDash([]); 
+
+
+    if (newPathUnlocked || (cutsceneActive && cutsceneType === 'wave6' && cutscenePhase === 2)) {
+        ctx.save();
+        ctx.strokeStyle = '#292524';
+        ctx.lineWidth = 36;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(path2[0].x, path2[0].y);
+        path2.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+
+
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([12, 18]);
+        ctx.beginPath();
+        ctx.moveTo(path2[0].x, path2[0].y);
+        path2.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+        ctx.setLineDash([]); 
+        ctx.restore();
+    } else if (cutsceneActive && cutsceneType === 'wave6' && cutscenePhase === 1) {
+        ctx.save();
+        ctx.strokeStyle = '#292524';
+        ctx.lineWidth = 36;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        drawDynamicRoadSegment(ctx, path2, cutsceneVehicle, 0);
+        
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([12, 18]);
+        drawDynamicRoadSegment(ctx, path2, cutsceneVehicle, 0);
+        ctx.restore();
+    }
+
+
+    if (newPath2Unlocked || (cutsceneActive && cutsceneType === 'wave12' && cutscenePhase === 2)) {
+        ctx.save();
+        ctx.strokeStyle = '#292524';
+        ctx.lineWidth = 36;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(path3[0].x, path3[0].y);
+        path3.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+
+
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([12, 18]);
+        ctx.beginPath();
+        ctx.moveTo(path3[0].x, path3[0].y);
+        path3.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+        ctx.setLineDash([]); 
+        ctx.restore();
+    } else if (cutsceneActive && cutsceneType === 'wave12' && cutscenePhase === 1) {
+        ctx.save();
+        ctx.strokeStyle = '#292524';
+        ctx.lineWidth = 36;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        drawDynamicRoadSegment(ctx, path3, cutsceneVehicle, cutsceneVehicle.wpIdx);
+        
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([12, 18]);
+        drawDynamicRoadSegment(ctx, path3, cutsceneVehicle, cutsceneVehicle.wpIdx);
+        ctx.restore();
+    }
+
+
+    debrisList.forEach(db => {
+        ctx.save();
+        ctx.translate(db.x, db.y);
+        ctx.rotate(db.rotation);
+        
+        if (db.type === 'shack') {
+            ctx.fillStyle = '#451a03'; 
+            ctx.beginPath();
+            ctx.moveTo(-db.size, db.size/2);
+            ctx.lineTo(-db.size, -db.size/2 + 6);
+            ctx.lineTo(-db.size * 0.1, -db.size/2 + 6);
+            ctx.lineTo(0, db.size/4); 
+            ctx.lineTo(db.size * 0.5, -db.size/4);
+            ctx.lineTo(db.size * 0.8, db.size/2);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.strokeStyle = db.roofColor;
+            ctx.lineWidth = 3.5;
+            ctx.beginPath();
+            ctx.moveTo(-db.size - 4, -db.size/2 + 3);
+            ctx.lineTo(-db.size * 0.2, -db.size/2 + 3);
+            ctx.stroke();
+
+
+            ctx.fillStyle = '#1c1917';
+            ctx.fillRect(-db.size * 0.75, -db.size * 0.1, db.size * 0.32, db.size * 0.32);
+            
+            ctx.strokeStyle = '#78350f';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(-db.size * 0.75, -db.size * 0.1, db.size * 0.32, db.size * 0.32);
+            
+            ctx.beginPath();
+            ctx.moveTo(-db.size * 0.59, -db.size * 0.1);
+            ctx.lineTo(-db.size * 0.59, db.size * 0.22);
+            ctx.moveTo(-db.size * 0.75, db.size * 0.06);
+            ctx.lineTo(-db.size * 0.43, db.size * 0.06);
+            ctx.stroke();
+
+
+            ctx.fillStyle = '#120c08';
+            ctx.beginPath();
+            ctx.moveTo(db.size * 0.15, db.size * 0.1);
+            ctx.lineTo(db.size * 0.45, db.size * 0.1);
+            ctx.lineTo(db.size * 0.45, db.size * 0.4);
+            ctx.lineTo(db.size * 0.15, db.size * 0.4);
+            ctx.closePath();
+            ctx.fill();
+
+
+            ctx.strokeStyle = '#1c1917';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(-db.size, db.size/2);
+            ctx.lineTo(-db.size - 6, db.size/2 + 4);
+            ctx.moveTo(db.size * 0.3, -db.size/2);
+            ctx.lineTo(db.size * 0.55, -db.size * 0.85);
+            ctx.stroke();
+        } 
+        else {
+            ctx.fillStyle = '#44403c'; 
+            ctx.beginPath();
+            ctx.moveTo(-db.size * 0.5, db.size * 0.8);
+            ctx.lineTo(-db.size * 0.5, -db.size * 0.5); 
+            ctx.lineTo(-db.size * 0.15, -db.size * 0.85); 
+            ctx.lineTo(0, -db.size * 0.4); 
+            ctx.lineTo(db.size * 0.35, -db.size * 0.45);
+            ctx.lineTo(db.size * 0.5, db.size * 0.8);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.strokeStyle = '#1c1917';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, -db.size * 0.4);
+            ctx.lineTo(-db.size * 0.15, 0);
+            ctx.lineTo(db.size * 0.2, db.size * 0.4);
+            ctx.stroke();
+
+
+            ctx.fillStyle = '#1c1917';
+            ctx.fillRect(-db.size * 0.32, -db.size * 0.25, db.size * 0.16, db.size * 0.36);
+            
+            ctx.beginPath();
+            ctx.moveTo(db.size * 0.12, -db.size * 0.12);
+            ctx.lineTo(db.size * 0.38, -db.size * 0.22);
+            ctx.lineTo(db.size * 0.42, db.size * 0.28);
+            ctx.lineTo(db.size * 0.12, db.size * 0.18);
+            ctx.closePath();
+            ctx.fill();
+
+
+            if (db.variationId === 0 && db.hasDish) {
+                ctx.strokeStyle = '#78716c';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, -db.size * 0.4);
+                ctx.lineTo(-10, -db.size * 0.4 - 12);
+                ctx.stroke();
+                ctx.fillStyle = '#a8a29e';
+                ctx.beginPath();
+                ctx.arc(-10, -db.size * 0.4 - 12, 6, 0, Math.PI*2);
+                ctx.fill();
+            } else if (db.variationId === 1) {
+                ctx.strokeStyle = '#991b1b'; 
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(db.size * 0.2, -db.size * 0.4);
+                ctx.lineTo(db.size * 0.35, -db.size * 0.4 - 20);
+                ctx.stroke();
+            } else {
+                ctx.strokeStyle = '#78350f';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-db.size * 0.4, -db.size * 0.4);
+                ctx.lineTo(-db.size * 0.8, -db.size * 0.9);
+                ctx.stroke();
+            }
+        }
+        ctx.restore();
+    });
+
+
+    ctx.fillStyle = '#1e1b18';
+    ctx.fillRect(780, 250, 25, 95);
+    ctx.fillStyle = '#7f1d1d';
+    ctx.fillRect(780, 250, 6, 95);
+    ctx.fillStyle = '#ef4444';
+    ctx.font = '22px Courier New';
+    ctx.fillText("☠", 783, 305);
+
+
+    towers.forEach(t => {
+        let lvl = t.level || 1;
+        
+        if (activeSelectedTower === t) {
+            ctx.save();
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, t.range, 0, Math.PI*2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, 22, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = activeSelectedTower === t ? '#fbbf24' : '#475569';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        ctx.rotate(t.angle);
+
+
+        ctx.fillStyle = t.colorBarrel;
+        if (t.type === 'gunner') {
+            if (lvl === 1) {
+                ctx.fillRect(0, -4, t.barrelLen, 8);
+            } else if (lvl === 2) {
+                ctx.fillRect(0, -4, t.barrelLen, 8);
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(t.barrelLen - 4, -7, 6, 14);
+                ctx.fillStyle = '#111827';
+                ctx.fillRect(-12, -15, 6, 6);
+                ctx.fillRect(-12, 9, 6, 6);
+            } else if (lvl === 3) {
+                ctx.fillRect(0, -8, t.barrelLen + 4, 5);
+                ctx.fillRect(0, 3, t.barrelLen + 4, 5);
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(8, -11, 4, 2.5);
+                ctx.fillRect(8, 9, 4, 2.5);
+            } else {
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(0, -12, 10, 24); 
+                ctx.fillStyle = t.colorBarrel;
+                ctx.fillRect(8, -10, t.barrelLen + 6, 3);
+                ctx.fillRect(8, -4, t.barrelLen + 6, 3);
+                ctx.fillRect(8, 2, t.barrelLen + 6, 3);
+                ctx.fillRect(8, 8, t.barrelLen + 6, 3);
+                ctx.fillStyle = '#38bdf8'; 
+                ctx.fillRect(1, -3, 6, 6);
+            }
+        } else if (t.type === 'flamer') {
+            if (lvl === 1) {
+                ctx.fillRect(0, -6, t.barrelLen, 4);
+                ctx.fillRect(0, 2, t.barrelLen, 4);
+            } else if (lvl === 2) {
+                ctx.fillRect(0, -6, t.barrelLen, 4);
+                ctx.fillRect(0, 2, t.barrelLen, 4);
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.arc(t.barrelLen + 2, -4, 2.5, 0, Math.PI*2);
+                ctx.arc(t.barrelLen + 2, 4, 2.5, 0, Math.PI*2);
+                ctx.fill();
+            } else if (lvl === 3) {
+                ctx.fillRect(0, -6, t.barrelLen, 4);
+                ctx.fillRect(0, 2, t.barrelLen, 4);
+                ctx.fillStyle = '#ca8a04';
+                ctx.fillRect(-16, -16, 8, 8);
+                ctx.fillRect(-16, 8, 8, 8);
+            } else {
+                ctx.fillRect(0, -10, t.barrelLen + 2, 3.5);
+                ctx.fillRect(0, -2, t.barrelLen + 2, 3.5);
+                ctx.fillRect(0, 6, t.barrelLen + 2, 3.5);
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(-10, -16, 12, 4);
+                ctx.fillRect(-10, 12, 12, 4);
+            }
+        } else if (t.type === 'cannon') {
+            if (lvl === 1) {
+                ctx.fillRect(0, -5, t.barrelLen, 10);
+            } else if (lvl === 2) {
+                ctx.fillRect(0, -5, t.barrelLen, 10);
+                ctx.fillStyle = '#64748b';
+                ctx.fillRect(2, -9, 12, 3.5);
+                ctx.fillRect(2, 5.5, 12, 3.5);
+            } else if (lvl === 3) {
+                ctx.fillRect(0, -9, t.barrelLen, 6);
+                ctx.fillRect(0, 3, t.barrelLen, 6);
+                ctx.fillStyle = '#ea580c';
+                ctx.fillRect(10, -9, 4, 24);
+            } else {
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(0, -13, t.barrelLen, 26);
+                ctx.fillStyle = '#f59e0b'; 
+                ctx.fillRect(8, -13, 3, 26);
+                ctx.fillStyle = '#b91c1c';
+                ctx.beginPath();
+                ctx.arc(t.barrelLen, -7, 3, 0, Math.PI*2);
+                ctx.arc(t.barrelLen, -1, 3, 0, Math.PI*2);
+                ctx.arc(t.barrelLen, 5, 3, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+
+
+        ctx.fillStyle = t.color;
+        ctx.fillRect(-11, -11, 22, 22);
+
+
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(0, 0, 4, 0, Math.PI*2);
+        ctx.fill();
+
+
+        ctx.restore();
+
+
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = 'bold 9px Arial';
+        ctx.fillText(`LVL ${t.level || 1}`, t.x - 12, t.y + 32);
+    });
+
+
+    enemies.forEach(e => {
+        ctx.save();
+        ctx.translate(e.x, e.y);
+        ctx.rotate(e.angle);
+
+
+        ctx.fillStyle = e.color;
+        if (e.type === "supertank" || e.type === "mega_tank") {
+            let width = e.type === "mega_tank" ? 95 : 64;
+            let height = e.type === "mega_tank" ? 64 : 44;
+            let innerSize = e.type === "mega_tank" ? 45 : 30;
+            
+            ctx.fillStyle = e.type === "mega_tank" ? '#020617' : '#1e293b';
+            ctx.fillRect(-width/2, -height/2, width, height);
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(-width/2 + 4, -height/2 - 3, width - 8, 4);
+            ctx.fillRect(-width/2 + 4, height/2 - 1, width - 8, 4);
+
+
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(0, -6, width/2 + 10, 12);
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(-innerSize/2, -innerSize/2, innerSize, innerSize);
+            
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(innerSize/2 - 3, -innerSize/2 + 3, 3, innerSize - 6);
+
+
+            if (e.type === 'mega_tank') {
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.arc(-22, -22, 5, 0, Math.PI*2);
+                ctx.arc(-22, 22, 5, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+
+        } else if (e.type === "crawler_titan") {
+            let walkCycle = frameCount * 0.16;
+            ctx.strokeStyle = '#374151';
+            ctx.lineWidth = 6.5;
+
+
+            for (let leg = -2; leg <= 2; leg++) {
+                let offsetPhase = leg * 1.2;
+                let legX = leg * 12;
+                let stepExtY = 24 + Math.sin(walkCycle + offsetPhase) * 14;
+
+
+                ctx.beginPath();
+                ctx.moveTo(legX, 0);
+                ctx.lineTo(legX * 1.4, stepExtY);
+                ctx.stroke();
+            }
+
+
+            ctx.fillStyle = '#111827';
+            ctx.beginPath();
+            ctx.moveTo(-40, -25);
+            ctx.lineTo(35, -25);
+            ctx.lineTo(45, 0);
+            ctx.lineTo(35, 25);
+            ctx.lineTo(-40, 25);
+            ctx.closePath();
+            ctx.fill();
+
+
+            ctx.fillStyle = '#374151';
+            ctx.fillRect(-35, -29, 70, 4);
+            ctx.fillRect(-35, 25, 70, 4);
+
+
+            ctx.strokeStyle = '#eab308';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-25, -15); ctx.lineTo(-15, -25);
+            ctx.moveTo(-10, -15); ctx.lineTo(0, -25);
+            ctx.moveTo(5, -15); ctx.lineTo(15, -25);
+            ctx.stroke();
+
+
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath();
+            ctx.arc(-10, 0, 10, 0, Math.PI*2);
+            ctx.fill();
+
+
+            ctx.strokeStyle = '#4b5563';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(35, -10);
+            ctx.lineTo(48, -18);
+            ctx.moveTo(35, 10);
+            ctx.lineTo(48, 18);
+            ctx.stroke();
+
+
+        } else if (e.type === "tanker") {
+            ctx.fillStyle = '#1a202c';
+            ctx.fillRect(-24, -11, 48, 22);
+            
+            ctx.fillStyle = '#4a5568';
+            ctx.fillRect(-18, -13, 30, 2);
+            ctx.fillRect(-18, 11, 30, 2);
+
+
+            ctx.strokeStyle = '#718096';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(24, -10);
+            ctx.lineTo(31, -4);
+            ctx.lineTo(24, 0);
+            ctx.lineTo(31, 4);
+            ctx.lineTo(24, 10);
+            ctx.stroke();
+
+
+            ctx.fillStyle = '#1a202c';
+            ctx.fillRect(-22, -15, 5, 4);
+            ctx.fillRect(-10, -15, 5, 4);
+            
+            ctx.fillStyle = '#f56565'; 
+            ctx.fillRect(22, -8, 2, 4);
+            ctx.fillRect(22, 4, 2, 4);
+
+
+        } else if (e.type === "buggy") {
+            ctx.fillStyle = '#7c2d12'; 
+            ctx.beginPath();
+            ctx.moveTo(18, 0);
+            ctx.lineTo(-15, -12);
+            ctx.lineTo(-15, 12);
+            ctx.closePath();
+            ctx.fill();
+
+
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(2, -3, 6, 6);
+            ctx.fillStyle = '#f56565'; 
+
+
+            ctx.strokeStyle = '#4a5568';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-10, -12); ctx.lineTo(-15, -16);
+            ctx.moveTo(-10, 12); ctx.lineTo(-15, 16);
+            ctx.stroke();
+
+
+        } else {
+            ctx.fillStyle = '#2d3748';
+            ctx.beginPath();
+            ctx.arc(0, 0, e.size, 0, Math.PI*2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(e.size, -3);
+            ctx.lineTo(e.size + 6, 0);
+            ctx.lineTo(e.size, 3);
+            ctx.stroke();
+
+
+            ctx.fillStyle = '#f7fafc'; 
+            ctx.beginPath();
+            ctx.arc(3, 0, 3.5, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(2.5, -2, 1, 1.5);
+            ctx.fillRect(2.5, 0.5, 1, 1.5);
+        }
+
+
+        ctx.restore();
+
+
+        ctx.fillStyle = '#450a0a';
+        ctx.fillRect(e.x - 18, e.y - e.size - 10, 36, 4);
+        ctx.fillStyle = '#22c55e';
+        ctx.fillRect(e.x - 18, e.y - e.size - 10, 36 * (e.hp / e.maxHp), 4);
+    });
+
+
+    bullets.forEach(b => {
+        ctx.fillStyle = b.color;
+        if (b.isDynamite) {
+            ctx.save();
+            ctx.translate(b.x, b.y);
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(-5, -8, 10, 16);
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(-6, -4, 12, 2);
+            ctx.fillRect(-6, 2, 12, 2);
+            
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, -8);
+            ctx.quadraticCurveTo(4, -14, Math.sin(frameCount * 0.4) * 3, -16);
+            ctx.stroke();
+            ctx.restore();
+        } else if (b.type === 'flamer') {
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, 6, 0, Math.PI*2);
+            ctx.fill();
+        } else if (b.type === 'cannon') {
+            ctx.save();
+            ctx.translate(b.x, b.y);
+            ctx.rotate(b.originAngle);
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(-8, -3, 16, 6);
+            ctx.restore();
+        } else {
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, 2.5, 0, Math.PI*2);
+            ctx.fill();
+        }
+    });
+
+
+    particles.forEach(p => {
+        if (p.text) {
+            ctx.fillStyle = p.color;
+            ctx.font = 'bold 11px Arial';
+            ctx.fillText(p.text, p.x, p.y);
+        } else {
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, p.size || 2.5, p.size || 2.5);
+        }
+    });
+
+
+    // Drawing Mid-Wave Air Bombers
+    activeMidWaveBombers.forEach(b => {
+        drawRefinedBiker(ctx, b.x, b.y, 0, b.color);
+    });
+
+
+    if (!isSniperMode && !isCloseToPath(mouseX, mouseY, 28) && !isPaused && !nukeActive) {
+        let inCollision = false;
+        for (let t of towers) {
+            if (Math.sqrt((t.x - mouseX)**2 + (t.y - mouseY)**2) < 30) { inCollision = true; break; }
+        }
+        
+        if (!inCollision) {
+            const range = towerSpecs[selectedTowerType].range;
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
+            ctx.beginPath();
+            ctx.arc(mouseX, mouseY, range, 0, Math.PI*2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+    }
+
+
+    if (isSniperMode) {
+        ctx.save();
+        ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+        
+        ctx.beginPath();
+        ctx.rect(0, 0, canvas.width, canvas.height);
+        ctx.arc(mouseX, mouseY, 75, 0, Math.PI * 2, true); 
+        ctx.fill();
+
+
+        ctx.strokeStyle = '#ef4444'; 
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(mouseX, mouseY, 75, 0, Math.PI*2);
+        ctx.stroke();
+
+
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(mouseX - 95, mouseY);
+        ctx.lineTo(mouseX + 95, mouseY);
+        ctx.moveTo(mouseX, mouseY - 95);
+        ctx.lineTo(mouseX, mouseY + 95);
+        ctx.stroke();
+
+
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(mouseX, mouseY, 3, 0, Math.PI*2);
+        ctx.fill();
+
+
+        ctx.restore();
+    }
+
+
+    if (endgameChoiceActive) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(15, 10, 5, 0.85)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+
+        // Glowing transmission console box
+        ctx.fillStyle = '#1c120c';
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 4;
+        ctx.fillRect(150, 45, 500, 310);
+        ctx.strokeRect(150, 45, 500, 310);
+
+
+        // Warning headers
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = 'bold 18px "Courier New"';
+        ctx.textAlign = 'center';
+        ctx.fillText("🏆 THE WORLD ENDER HAS FALLEN! 🏆", 400, 85);
+
+
+        // Description text
+        ctx.fillStyle = '#fef08a';
+        ctx.font = 'bold 11px "Courier New"';
+        ctx.fillText("THE FURY ROAD HAS BEEN DEFENDED. CITADEL PROTOCOLS ARE ACTIVE.", 400, 130);
+        ctx.fillText("COMMANDER, DECIDE THE FUTURE OF YOUR FORTRESS:", 400, 150);
+
+
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '10px "Courier New"';
+        ctx.fillText("ENGAGE FINAL STRIKE: Deploy nuclear missile to eradicate them.", 400, 185);
+        ctx.fillText("KEEP GOING: Battle ever-strengthening waves of huge armor", 400, 205);
+        ctx.fillText("and occasional high-altitude bomber units.", 400, 220);
+
+
+        // Draw Button A (Engage Final Strike)
+        let hoverA = (mouseX >= 180 && mouseX <= 390 && mouseY >= 250 && mouseY <= 295);
+        ctx.fillStyle = hoverA ? '#ef4444' : '#7f1d1d';
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2.5;
+        ctx.fillRect(180, 250, 210, 45);
+        ctx.strokeRect(180, 250, 210, 45);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px "Courier New"';
+        ctx.fillText("🚀 ENGAGE FINAL STRIKE", 285, 276);
+
+
+        // Draw Button B (Keep Going)
+        let hoverB = (mouseX >= 410 && mouseX <= 620 && mouseY >= 250 && mouseY <= 295);
+        ctx.fillStyle = hoverB ? '#10b981' : '#064e3b';
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2.5;
+        ctx.fillRect(410, 250, 210, 45);
+        ctx.strokeRect(410, 250, 210, 45);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px "Courier New"';
+        ctx.fillText("🚜 KEEP GOING (INFINITE)", 515, 276);
+
+
+        ctx.restore();
+        return;
+    }
+
+
+    if (cutsceneActive) {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, 45);
+        ctx.fillRect(0, canvas.height - 45, canvas.width, 45);
+        
+        if (cutsceneType === 'wave15') {
+            if (!threatSignOpened && !threatSignClicked && (messengerGuy && (messengerGuy.state === 'taunting' || messengerGuy.state === 'planting'))) {
+                ctx.save();
+                ctx.fillStyle = '#1c1917';
+                ctx.strokeStyle = '#b91c1c';
+                ctx.lineWidth = 2;
+                
+                ctx.fillRect(threatSignX - 25, threatSignY - 15, 50, 30);
+                ctx.strokeRect(threatSignX - 25, threatSignY - 15, 50, 30);
+                
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(threatSignX - 3, threatSignY + 15, 6, 25);
+
+
+                ctx.strokeStyle = '#b91c1c';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(threatSignX - 18, threatSignY - 5);
+                ctx.lineTo(threatSignX + 18, threatSignY - 2);
+                ctx.moveTo(threatSignX - 15, threatSignY + 5);
+                ctx.lineTo(threatSignX + 15, threatSignY + 3);
+                ctx.stroke();
+
+
+                ctx.fillStyle = '#f59e0b';
+                ctx.font = 'bold 10px "Courier New"';
+                ctx.textAlign = 'center';
+                ctx.fillText("🔍 Click to read sign", threatSignX, threatSignY - 25);
+                
+                ctx.restore();
+            } else if (threatSignOpened && !threatSignClicked) {
+                ctx.save();
+                ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height); 
+
+
+                ctx.fillStyle = '#1c120c';
+                ctx.strokeStyle = '#b45309';
+                ctx.lineWidth = 5;
+                ctx.fillRect(175, 80, 450, 240);
+                ctx.strokeRect(175, 80, 450, 240);
+
+
+                ctx.fillStyle = '#ef4444';
+                ctx.font = 'bold 18px "Courier New"';
+                ctx.textAlign = 'center';
+                ctx.fillText("📢 ULTIMATUM FROM THE RAIDER CLAN", 400, 115);
+
+
+                ctx.fillStyle = '#f59e0b';
+                ctx.font = 'bold 22px "Courier New"';
+                ctx.fillText("SURRENDER", 400, 165);
+                ctx.fillText("OR FACE", 400, 200);
+                ctx.fillText("SERIOUS CONSEQUENCES!", 400, 235);
+
+
+                ctx.fillStyle = '#10b981';
+                ctx.font = 'bold 12px "Courier New"';
+                ctx.fillText("[ CLICK HERE TO DISMISS & PREPARE FOR BATTLE ]", 400, 285);
+                ctx.restore();
+            }
+        }
+        
+        if (cutsceneVehicle) {
+            if (threatSignOpened) {
+            } else {
+                if (cutsceneVehicle.type === 'bike_messenger' || cutsceneVehicle.type === 'bike_bomber') {
+                    drawRefinedBiker(ctx, cutsceneVehicle.x, cutsceneVehicle.y, cutsceneVehicle.angle, cutsceneVehicle.color);
+                } 
+                else if (cutsceneVehicle.type === 'dozer') {
+                    ctx.save();
+                    ctx.translate(cutsceneVehicle.x, cutsceneVehicle.y);
+                    ctx.rotate(cutsceneVehicle.angle);
+                    ctx.fillStyle = '#1c1917'; 
+                    ctx.fillRect(-18, -18, 36, 6); 
+                    ctx.fillRect(-18, 12, 36, 6);  
+                    
+                    ctx.strokeStyle = '#44403c';
+                    ctx.lineWidth = 1.5;
+                    for (let tx = -16; tx <= 16; tx += 6) {
+                        ctx.beginPath();
+                        ctx.moveTo(tx, -18); ctx.lineTo(tx, -12);
+                        ctx.moveTo(tx, 12); ctx.lineTo(tx, 18);
+                        ctx.stroke();
+                    }
+
+
+                    ctx.fillStyle = '#eab308'; 
+                    ctx.fillRect(-12, -12, 24, 24);
+                    
+                    ctx.fillStyle = '#ca8a04';
+                    ctx.fillRect(12, -8, 8, 16);
+                    
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(-6, -9, 8, 18);
+                    ctx.fillStyle = '#38bdf8'; 
+                    ctx.fillRect(-4, -8, 2, 16);
+
+
+                    ctx.fillStyle = '#1e293b';
+                    ctx.beginPath();
+                    ctx.arc(8, -6, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+
+                    ctx.save();
+                    ctx.translate(20, 0); 
+                    ctx.fillStyle = '#78716c'; 
+                    ctx.beginPath();
+                    ctx.moveTo(0, -22);
+                    ctx.quadraticCurveTo(6, 0, 0, 22);
+                    ctx.lineTo(-4, 20);
+                    ctx.quadraticCurveTo(2, 0, -4, -20);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -12); ctx.lineTo(3, -16);
+                    ctx.moveTo(1, -2); ctx.lineTo(4, -6);
+                    ctx.moveTo(1, 8); ctx.lineTo(4, 4);
+                    ctx.stroke();
+
+
+                    ctx.restore();
+
+
+                    ctx.strokeStyle = '#44403c';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(4, -11); ctx.lineTo(18, -18);
+                    ctx.moveTo(4, 11); ctx.lineTo(18, 18);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+        }
+
+
+        if (messengerGuy && !threatSignOpened) {
+            drawLittleRaiderGuy(ctx, messengerGuy.x, messengerGuy.y, messengerGuy.state, frameCount);
+            
+            if (messengerGuy.state === 'throwing_bomb') {
+                ctx.save();
+                ctx.translate(messengerGuy.dynamiteX, messengerGuy.dynamiteY);
+                ctx.rotate(frameCount * 0.2);
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(-3, -7, 6, 14);
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(-4, -3, 8, 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(-0.5, -9, 1, 3);
+                ctx.restore();
+            }
+        }
+    }
+
+
+    if (nukeActive) {
+        if (nukePhase === 1) {
+            ctx.fillStyle = '#1c1917';
+            ctx.fillRect(nukeSiloX - 22, nukeSiloY - 14, 44, 28);
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(nukeSiloX - 22, nukeSiloY - 14, 44, 28);
+
+
+            let size = Math.abs(Math.sin(frameCount * 0.12)) * 8 + 2;
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.6)';
+            ctx.beginPath();
+            ctx.arc(nukeSiloX, nukeSiloY - 24, size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(nukeSiloX, nukeSiloY - 24, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+
+            let offset = Math.min(20, nukeTimer * 0.15);
+            ctx.fillStyle = '#44403c';
+            ctx.fillRect(nukeSiloX - 22 - offset, nukeSiloY - 14, 22, 28);
+            ctx.fillRect(nukeSiloX + offset, nukeSiloY - 14, 22, 28);
+        }
+        else if (nukePhase === 2) {
+            ctx.fillStyle = '#1c1917';
+            ctx.fillRect(nukeSiloX - 22, nukeSiloY - 14, 44, 28);
+            ctx.fillStyle = '#44403c';
+            ctx.fillRect(nukeSiloX - 42, nukeSiloY - 14, 22, 28);
+            ctx.fillRect(nukeSiloX + 20, nukeSiloY - 14, 22, 28);
+
+
+            ctx.save();
+            ctx.translate(nukeMissile.x, nukeMissile.y);
+            ctx.fillStyle = '#cbd5e1'; 
+            ctx.fillRect(-6, -24, 12, 48);
+            
+            ctx.fillStyle = '#b91c1c';
+            ctx.beginPath();
+            ctx.moveTo(-6, -24);
+            ctx.lineTo(0, -40);
+            ctx.lineTo(6, -24);
+            ctx.closePath();
+            ctx.fill();
+
+
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(-10, 14, 4, 10);
+            ctx.fillRect(6, 14, 4, 10);
+            ctx.restore();
+        }
+    }
+
+
+    if (health <= 0 && !isGodMode) {
+        ctx.fillStyle = "rgba(11, 7, 4, 0.95)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+       
+        ctx.fillStyle = "#ef4444";
+        ctx.font = "bold 34px Courier New";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", canvas.width/2, canvas.height/2 - 20);
+
+
+        ctx.fillStyle = "#f59e0b";
+        ctx.font = "16px Courier New";
+        ctx.textAlign = "center";
+        ctx.fillText("the citadel was breached by raiders.", canvas.width/2, canvas.height/2 + 25);
+    }
+
+
+    ctx.restore();
+}
+
+
+function showFloatingText(x, y, txt, color) {
+    particles.push({
+        x: x,
+        y: y,
+        vx: 0,
+        vy: -0.8,
+        life: 40,
+        text: txt,
+        color: color
+    });
+}
+
+
+function showStatus(msg) {
+    const statusEl = document.getElementById('status-bar');
+    if (statusEl) {
+        statusEl.innerText = msg;
+        statusEl.style.opacity = 1;
+        
+        if (msg.includes("INTERACT")) return;
+        
+        setTimeout(() => {
+            statusEl.style.opacity = 0;
+        }, 4500);
+    }
+}
+
+
+canvas.addEventListener('click', (e) => {
+    if (nukeActive && nukePhase === 6) {
+        const rect = canvas.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
+        const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
+        if (x >= canvas.width / 2 - 80 && x <= canvas.width / 2 + 80 && y >= canvas.height / 2 + 85 && y <= canvas.height / 2 + 120) {
+            resetGame();
+        }
+    }
+});
+
+
+function loop() {
+    if (!isPaused || nukeActive) {
+        let iterations = nukeActive ? 1 : gameSpeed;
+        for (let s = 0; s < iterations; s++) {
+            updateGame();
+        }
+        updateBackground();
+    }
+    
+    draw();
+    requestAnimationFrame(loop);
+}
+
+
+initWastelandDebris();
+updateUI();
+loop();
+</script>
+</body>
+</html>
+
+
+
